@@ -1,0 +1,9 @@
+rasterio
+numpy
+tensorflow>=2.10
+opencv-python
+scikit-learn
+matplotlib
+tqdm
+albumentations
+segmentation-models
