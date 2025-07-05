@@ -85,7 +85,7 @@ def main():
     
     # Paths
     base_dir = '/kaggle/input/stacked-fire-probability-prediction-dataset/dataset_stacked'
-    output_dir = 'outputs'
+    output_dir = '/kaggle/working/forest_fire_ml/fire_pred_model/outputs'
     
     # Create output directories
     os.makedirs(f'{output_dir}/checkpoints', exist_ok=True)
