@@ -28,6 +28,6 @@ def focal_loss(gamma=2.0, alpha=0.25):
         p_t = tf.where(tf.equal(y_true, 1), y_pred, 1 - y_pred)
         alpha_t = tf.where(tf.equal(y_true, 1), alpha, 1 - alpha)
         focal_weight = alpha_t * tf.pow((1 - p_t), gamma)
-        focal_loss = -focal_weight * tf.log(p_t)
+        focal_loss = -focal_weight * tf.math.log(p_t)
         return tf.reduce_mean(focal_loss)
     return focal_loss_fixed
