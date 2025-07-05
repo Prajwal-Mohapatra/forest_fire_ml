@@ -9,7 +9,7 @@ from dataset.loader import FireDatasetGenerator
 from utils.metrics import iou_score, dice_coef, focal_loss
 import seaborn as sns
 
-def evaluate_model(model_path, test_files, output_dir='outputs'):
+def evaluate_model(model_path, test_files, output_dir='/kaggle/working/forest_fire_ml/fire_pred_model/outputs/plots'):
     """Evaluate trained model on test data"""
     
     # Load model with ALL custom objects
