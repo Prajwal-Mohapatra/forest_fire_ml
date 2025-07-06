@@ -1,0 +1,61 @@
+# Model outputs and artifacts
+fire_pred_model/outputs/final_model.h5
+fire_pred_model/outputs/logs/training_log.csv
+fire_pred_model/outputs/plots/training_history.png
+fire_pred_model/outputs/predictions/prediction.txt.txt
+
+# Keep directory structure but ignore large files
+fire_pred_model/outputs/**
+!fire_pred_model/outputs/blank.txt
+!fire_pred_model/outputs/logs/
+!fire_pred_model/outputs/plots/
+!fire_pred_model/outputs/predictions/
+
+# Model checkpoints and saved models
+*.h5
+*.hdf5
+*.pkl
+*.model
+*.weights
+
+# Training logs and temporary files
+*.log
+training_*.csv
+validation_*.csv
+*.tmp
+
+# Dataset cache
+dataset_cache/
+*.cache
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Virtual environment (if created locally)
+venv/
+env/
+.env
+
+# Jupyter notebook checkpoints
+.ipynb_checkpoints/
+
+# Large prediction outputs
+predictions_*.tif
+predictions_*.tiff
+large_predictions/
+
+# Ignore the entire lfs directory for now
+# lfs/
