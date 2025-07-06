@@ -1,5 +1,5 @@
 # ====================
-# 7. evaluate.py
+# 7. evaluate.py (FIXED)
 # ====================
 import os
 import numpy as np
@@ -9,28 +9,72 @@ from dataset.loader import FireDatasetGenerator
 from utils.metrics import iou_score, dice_coef, focal_loss
 import seaborn as sns
 
+def load_model_safe(model_path):
+    """Safely load model with proper custom objects handling"""
+    
+    # Define all possible custom objects the model might need
+    custom_objects = {
+        # Loss function (the one that works)
+        'focal_loss_fixed': focal_loss(),
+        
+        # Metrics - try different possible names
+        'iou_score': iou_score,
+        'dice_coef': dice_coef,
+        
+        # Alternative names that might have been saved
+        'iou_score_1': iou_score,
+        'dice_coef_1': dice_coef,
+        'iou_score_2': iou_score,
+        'dice_coef_2': dice_coef,
+        
+        # Also include the factory function
+        'focal_loss': focal_loss,
+    }
+    
+    print(f"🔄 Attempting to load model from: {model_path}")
+    
+    # Try different loading strategies
+    strategies = [
+        # Strategy 1: Load with focal_loss_fixed only (we know this works)
+        {
+            'focal_loss_fixed': focal_loss(),
+        },
+        
+        # Strategy 2: Load without compilation (fallback)
+        None,
+        
+        # Strategy 3: Load with all custom objects
+        custom_objects,
+    ]
+    
+    model = None
+    for i, strategy in enumerate(strategies, 1):
+        try:
+            if strategy is None:
+                # Load without compilation
+                model = tf.keras.models.load_model(model_path, compile=False)
+                print(f"✅ Strategy {i}: Loaded without compilation")
+                break
+            else:
+                # Load with custom objects
+                model = tf.keras.models.load_model(model_path, custom_objects=strategy)
+                print(f"✅ Strategy {i}: Loaded with custom objects")
+                break
+                
+        except Exception as e:
+            print(f"❌ Strategy {i} failed: {str(e)}")
+            continue
+    
+    if model is None:
+        raise Exception("Failed to load model with any strategy")
+    
+    return model
+
 def evaluate_model(model_path, test_files, output_dir='outputs'):
     """Evaluate trained model on test data"""
     
-    # Load model with ALL custom objects
-    custom_objects = {
-        'focal_loss': focal_loss(),  # ✅ Added missing focal_loss
-        'iou_score': iou_score,
-        'dice_coef': dice_coef
-    }
-    
-    try:
-        model = tf.keras.models.load_model(model_path, custom_objects=custom_objects)
-        print(f"✅ Model loaded successfully from {model_path}")
-    except Exception as e:
-        print(f"❌ Failed to load model with custom objects: {str(e)}")
-        try:
-            # Fallback: load without compilation
-            model = tf.keras.models.load_model(model_path, compile=False)
-            print("⚠️ Model loaded without compilation (metrics disabled)")
-        except Exception as e2:
-            print(f"❌ Failed to load model completely: {str(e2)}")
-            raise e2
+    # Load model safely
+    model = load_model_safe(model_path)
     
     # Create test generator
     try:
@@ -48,22 +92,28 @@ def evaluate_model(model_path, test_files, output_dir='outputs'):
         print(f"❌ Failed to create test generator: {str(e)}")
         raise e
     
-    # Evaluate
+    # Evaluate - handle case where model wasn't compiled
     print("📊 Evaluating model...")
-    try:
-        results = model.evaluate(test_gen, verbose=1)
-        print(f"✅ Evaluation completed")
-        
-        # Print results with metric names
-        if hasattr(model, 'metrics_names'):
-            for name, value in zip(model.metrics_names, results):
-                print(f"  {name}: {value:.4f}")
-        
-    except Exception as e:
-        print(f"❌ Evaluation failed: {str(e)}")
-        results = None
+    results = None
     
-    # Generate predictions for visualization
+    try:
+        if hasattr(model, 'compiled_loss') and model.compiled_loss is not None:
+            # Model is compiled, can use evaluate
+            results = model.evaluate(test_gen, verbose=1)
+            print(f"✅ Evaluation completed")
+            
+            # Print results with metric names
+            if hasattr(model, 'metrics_names'):
+                for name, value in zip(model.metrics_names, results):
+                    print(f"  {name}: {value:.4f}")
+        else:
+            print("⚠️ Model not compiled, skipping built-in evaluation")
+            
+    except Exception as e:
+        print(f"❌ Built-in evaluation failed: {str(e)}")
+        print("⚠️ Continuing with manual evaluation...")
+    
+    # Generate predictions for visualization and manual metrics
     print("🔮 Generating predictions...")
     try:
         predictions = model.predict(test_gen, verbose=1)
@@ -73,10 +123,18 @@ def evaluate_model(model_path, test_files, output_dir='outputs'):
         print("📋 Collecting ground truth...")
         y_true = []
         for i in range(len(test_gen)):
-            _, masks = test_gen[i]  # ✅ Fixed syntax error (test*gen -> test_gen)
+            _, masks = test_gen[i]
             y_true.append(masks)
         y_true = np.concatenate(y_true, axis=0)
         print(f"✅ Ground truth collected: {y_true.shape}")
+        
+        # Calculate manual metrics
+        print("📊 Calculating manual metrics...")
+        manual_metrics = calculate_additional_metrics(y_true, predictions)
+        
+        print("\n📈 Manual Metrics:")
+        for name, value in manual_metrics.items():
+            print(f"  {name}: {value:.4f}")
         
         # Ensure output directory exists
         os.makedirs(f'{output_dir}/plots', exist_ok=True)
@@ -137,7 +195,7 @@ def calculate_additional_metrics(y_true, y_pred, threshold=0.5):
     # Convert to binary predictions
     y_pred_binary = (y_pred > threshold).astype(np.float32)
     
-    # Calculate metrics
+    # Calculate pixel-wise metrics
     tp = np.sum(y_true * y_pred_binary)
     fp = np.sum((1 - y_true) * y_pred_binary)
     fn = np.sum(y_true * (1 - y_pred_binary))
@@ -147,10 +205,19 @@ def calculate_additional_metrics(y_true, y_pred, threshold=0.5):
     recall = tp / (tp + fn) if (tp + fn) > 0 else 0
     f1 = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0
     
+    # Calculate IoU and Dice manually
+    intersection = np.sum(y_true * y_pred_binary)
+    union = np.sum(y_true) + np.sum(y_pred_binary) - intersection
+    iou = intersection / union if union > 0 else 0
+    
+    dice = (2 * intersection) / (np.sum(y_true) + np.sum(y_pred_binary)) if (np.sum(y_true) + np.sum(y_pred_binary)) > 0 else 0
+    
     metrics = {
         'precision': precision,
         'recall': recall,
         'f1_score': f1,
+        'iou_manual': iou,
+        'dice_manual': dice,
         'true_positives': tp,
         'false_positives': fp,
         'false_negatives': fn,
@@ -158,3 +225,15 @@ def calculate_additional_metrics(y_true, y_pred, threshold=0.5):
     }
     
     return metrics
+
+# Test function to run evaluation
+if __name__ == "__main__":
+    # Example usage
+    model_path = "/kaggle/working/forest_fire_ml/fire_pred_model/outputs/final_model.h5"
+    test_files = []  # Add your test files here
+    
+    if test_files:
+        results = evaluate_model(model_path, test_files)
+        print("🎉 Evaluation completed!")
+    else:
+        print("⚠️ No test files specified. Please add test file paths.")
