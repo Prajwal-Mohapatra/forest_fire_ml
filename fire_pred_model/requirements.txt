@@ -7,3 +7,16 @@ matplotlib
 tqdm
 albumentations
 segmentation-models
+
+# Cellular Automata dependencies
+scipy
+flask
+flask-cors
+
+# Data handling
+pandas
+geopandas
+
+# Additional utilities
+Pillow
+requests
