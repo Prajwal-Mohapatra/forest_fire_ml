@@ -1,18 +1,18 @@
 # Model outputs and artifacts
-outputs/final_model.h5
+# outputs/final_model.h5
 outputs/logs/training_log.csv
 outputs/plots/training_history.png
 outputs/predictions/prediction.txt.txt
 
 # Keep directory structure but ignore large files
-outputs/**
+# outputs/**
 !outputs/blank.txt
 !outputs/logs/
 !outputs/plots/
 !outputs/predictions/
 
 # Model checkpoints and saved models
-*.h5
+# *.h5
 *.hdf5
 *.pkl
 *.model
