@@ -6,8 +6,27 @@ import numpy as np
 import rasterio
 import tensorflow as tf
 import os
-from utils.preprocess import normalize_patch
-from utils.metrics import focal_loss, iou_score, dice_coef
+
+# Robust import handling for different execution contexts
+try:
+    # Try absolute imports first (when imported as module)
+    from forest_fire_ml.utils.preprocess import normalize_patch
+    from forest_fire_ml.utils.metrics import focal_loss, iou_score, dice_coef
+except ImportError:
+    try:
+        # Try relative imports (when run directly)
+        from utils.preprocess import normalize_patch
+        from utils.metrics import focal_loss, iou_score, dice_coef
+    except ImportError:
+        # Fallback for different directory structures
+        import sys
+        import os
+        current_dir = os.path.dirname(__file__)
+        utils_dir = os.path.join(current_dir, 'utils')
+        if utils_dir not in sys.path:
+            sys.path.insert(0, utils_dir)
+        from preprocess import normalize_patch
+        from metrics import focal_loss, iou_score, dice_coef
 
 def load_model_safe(model_path):
     """Safely load model with proper custom objects handling"""
@@ -323,6 +342,48 @@ def predict_fire_nextday(model_path, input_tif_path, output_dir,
     print(f"   - prediction_metadata.txt (Statistics)")
     
     return results
+
+def predict_fire_map(input_path, model_path=None, output_dir="outputs", **kwargs):
+    """
+    Convenience function that matches expected interface for notebook integration
+    
+    Args:
+        input_path: Path to input geospatial data
+        model_path: Path to trained model (optional)
+        output_dir: Output directory
+        **kwargs: Additional parameters
+        
+    Returns:
+        dict: Prediction results including probability and binary maps
+    """
+    
+    # Use default model path if not provided
+    if model_path is None:
+        # Try multiple possible model locations
+        possible_paths = [
+            "/kaggle/working/forest_fire_spread/forest_fire_ml/outputs/final_model.h5",
+            "/home/swayam/projects/forest_fire_spread/forest_fire_ml/outputs/final_model.h5",
+            "outputs/final_model.h5",
+            "forest_fire_ml/outputs/final_model.h5"
+        ]
+        
+        for path in possible_paths:
+            if os.path.exists(path):
+                model_path = path
+                break
+        
+        if model_path is None:
+            raise FileNotFoundError("No trained model found. Please provide model_path.")
+    
+    # Call the main prediction function
+    return predict_fire_nextday(
+        model_path=model_path,
+        input_tif_path=input_path,
+        output_dir=output_dir,
+        threshold=kwargs.get('threshold', 0.5),
+        patch_size=kwargs.get('patch_size', 256),
+        overlap=kwargs.get('overlap', 64)
+    )
 
 # Test and example usage
 if __name__ == "__main__":
