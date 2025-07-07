@@ -1,15 +1,15 @@
 # Model outputs and artifacts
-fire_pred_model/outputs/final_model.h5
-fire_pred_model/outputs/logs/training_log.csv
-fire_pred_model/outputs/plots/training_history.png
-fire_pred_model/outputs/predictions/prediction.txt.txt
+outputs/final_model.h5
+outputs/logs/training_log.csv
+outputs/plots/training_history.png
+outputs/predictions/prediction.txt.txt
 
 # Keep directory structure but ignore large files
-fire_pred_model/outputs/**
-!fire_pred_model/outputs/blank.txt
-!fire_pred_model/outputs/logs/
-!fire_pred_model/outputs/plots/
-!fire_pred_model/outputs/predictions/
+outputs/**
+!outputs/blank.txt
+!outputs/logs/
+!outputs/plots/
+!outputs/predictions/
 
 # Model checkpoints and saved models
 *.h5
