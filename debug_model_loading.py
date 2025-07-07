@@ -106,5 +106,5 @@ def inspect_saved_model(model_path):
         print(f"❌ 5. Load with all combinations: FAILED - {e}")
 
 if __name__ == "__main__":
-    model_path = "/kaggle/working/forest_fire_ml/fire_pred_model/outputs/final_model.h5"
+    model_path = "/kaggle/working/forest_fire_ml/outputs/final_model.h5"
     inspect_saved_model(model_path)

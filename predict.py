@@ -327,7 +327,7 @@ def predict_fire_nextday(model_path, input_tif_path, output_dir,
 # Test and example usage
 if __name__ == "__main__":
     # Configuration
-    model_path = "/kaggle/working/forest_fire_ml/fire_pred_model/outputs/final_model.h5"
+    model_path = "/kaggle/working/forest_fire_ml/outputs/final_model.h5"
     input_tif_path = "/kaggle/input/stacked-fire-probability-prediction-dataset/dataset_stacked/stack_2016_04_26.tif"  # Replace with actual path
     output_dir = "outputs/fire_predictions"
     
