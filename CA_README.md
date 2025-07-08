@@ -147,7 +147,7 @@ results = run_fire_simulation(
 from cellular_automata.integration import quick_integrated_simulation
 
 results = quick_integrated_simulation(
-    model_path="outputs/final_model.h5",
+    model_path="outputs/final_model.keras",
     data_directory="../../refined_dataset_stacking",
     date="2016_04_15",
     ignition_points=[(100, 100)],

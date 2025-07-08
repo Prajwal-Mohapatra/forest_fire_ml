@@ -344,10 +344,10 @@ def predict_fire_map(input_path, model_path=None, output_dir="outputs", **kwargs
     if model_path is None:
         # Try multiple possible model locations
         possible_paths = [
-            "/kaggle/working/forest_fire_spread/forest_fire_ml/outputs/final_model.h5",
-            "/home/swayam/projects/forest_fire_spread/forest_fire_ml/outputs/final_model.h5",
-            "outputs/final_model.h5",
-            "forest_fire_ml/outputs/final_model.h5"
+            "/kaggle/working/forest_fire_spread/forest_fire_ml/outputs/final_model.keras",
+            "/home/swayam/projects/forest_fire_spread/forest_fire_ml/outputs/final_model.keras",
+            "outputs/final_model.keras",
+            "forest_fire_ml/outputs/final_model.keras",
         ]
         
         for path in possible_paths:
@@ -371,7 +371,7 @@ def predict_fire_map(input_path, model_path=None, output_dir="outputs", **kwargs
 # Test and example usage
 if __name__ == "__main__":
     # Configuration
-    model_path = "/kaggle/working/forest_fire_ml/outputs/final_model.h5"
+    model_path = "/kaggle/working/forest_fire_ml/outputs/final_model.keras"
     input_tif_path = "/kaggle/input/stacked-fire-probability-prediction-dataset/dataset_stacked/stack_2016_04_26.tif"  # Replace with actual path
     output_dir = "outputs/fire_predictions"
     
