@@ -1,8 +1,8 @@
 # 4. model/resunet_a.py
 # ====================
 import tensorflow as tf
-from tensorflow.keras.layers import *
-from tensorflow.keras.models import Model
+from keras.layers import *
+from keras.models import Model
 
 def conv_block(inputs, num_filters, kernel_size=3, dilation_rate=1):
     """Convolution block with batch normalization and activation"""

@@ -1,7 +1,8 @@
 #====== metrics.py ======
 
 import tensorflow as tf
-import tensorflow.keras.backend as K
+import keras
+import keras.backend as K
 
 def iou_score(y_true, y_pred, smooth=1e-6):
     """Intersection over Union metric for binary segmentation"""
@@ -23,7 +24,7 @@ def dice_coef(y_true, y_pred, smooth=1e-6):
 def focal_loss(gamma=2.0, alpha=0.25):
     """Focal loss for handling class imbalance"""
     def focal_loss_fixed(y_true, y_pred):
-        epsilon = tf.keras.backend.epsilon()
+        epsilon = keras.backend.epsilon()
         y_pred = tf.clip_by_value(y_pred, epsilon, 1. - epsilon)
         p_t = tf.where(tf.equal(y_true, 1), y_pred, 1 - y_pred)
         alpha_t = tf.where(tf.equal(y_true, 1), alpha, 1 - alpha)

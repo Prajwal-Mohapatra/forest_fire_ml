@@ -3,7 +3,7 @@
 import os
 import numpy as np
 import rasterio
-from tensorflow.keras.utils import Sequence
+from keras.utils import Sequence
 from datetime import datetime, timedelta
 import albumentations as A
 from utils.preprocess import normalize_patch, get_fire_focused_coordinates

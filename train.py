@@ -5,11 +5,12 @@ import glob
 import matplotlib.pyplot as plt
 import tensorflow as tf
 import numpy as np
+import keras
 from datetime import datetime
 from model.resunet_a import build_resunet_a
 from dataset.loader import FireDatasetGenerator
 from utils.metrics import iou_score, dice_coef, focal_loss
-from tensorflow.keras.callbacks import ModelCheckpoint, EarlyStopping, ReduceLROnPlateau, CSVLogger
+from keras.callbacks import ModelCheckpoint, EarlyStopping, ReduceLROnPlateau, CSVLogger
 
 # Configure GPU
 gpus = tf.config.experimental.list_physical_devices('GPU')
@@ -21,7 +22,7 @@ if gpus:
         print(e)
 
 # Custom callback for monitoring
-class TrainingMonitor(tf.keras.callbacks.Callback):
+class TrainingMonitor(keras.callbacks.Callback):
     def __init__(self):
         super().__init__()
         self.train_metrics = []
@@ -118,7 +119,7 @@ def main():
     model = build_resunet_a(input_shape=(CONFIG['patch_size'], CONFIG['patch_size'], 9))
     
     # Compile with focal loss for better class imbalance handling
-    optimizer = tf.keras.optimizers.Adam(learning_rate=CONFIG['learning_rate'])
+    optimizer = keras.optimizers.Adam(learning_rate=CONFIG['learning_rate'])
     model.compile(
         optimizer=optimizer,
         loss=focal_loss(gamma=2.0, alpha=0.25),
@@ -168,7 +169,7 @@ def main():
     plot_training_history(history, output_dir)
     
     # Save final model
-    model.save(f'{output_dir}/final_model.h5')
+    model.export(f'{output_dir}/final_model.keras')
     print(f"Training completed! Model saved to {output_dir}/final_model.h5")
 
 def plot_training_history(history, output_dir):

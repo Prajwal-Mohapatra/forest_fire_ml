@@ -5,6 +5,7 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 import tensorflow as tf
+import keras
 from dataset.loader import FireDatasetGenerator
 from utils.metrics import iou_score, dice_coef, focal_loss
 import seaborn as sns
@@ -52,12 +53,12 @@ def load_model_safe(model_path):
         try:
             if strategy is None:
                 # Load without compilation
-                model = tf.keras.models.load_model(model_path, compile=False)
+                model = keras.models.load_model(model_path, compile=False)
                 print(f"✅ Strategy {i}: Loaded without compilation")
                 break
             else:
                 # Load with custom objects
-                model = tf.keras.models.load_model(model_path, custom_objects=strategy)
+                model = keras.models.load_model(model_path, custom_objects=strategy)
                 print(f"✅ Strategy {i}: Loaded with custom objects")
                 break
                 

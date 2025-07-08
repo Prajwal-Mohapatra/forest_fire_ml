@@ -5,28 +5,11 @@ import os
 import numpy as np
 import rasterio
 import tensorflow as tf
+import keras
 import os
 
-# Robust import handling for different execution contexts
-try:
-    # Try absolute imports first (when imported as module)
-    from forest_fire_ml.utils.preprocess import normalize_patch
-    from forest_fire_ml.utils.metrics import focal_loss, iou_score, dice_coef
-except ImportError:
-    try:
-        # Try relative imports (when run directly)
-        from utils.preprocess import normalize_patch
-        from utils.metrics import focal_loss, iou_score, dice_coef
-    except ImportError:
-        # Fallback for different directory structures
-        import sys
-        import os
-        current_dir = os.path.dirname(__file__)
-        utils_dir = os.path.join(current_dir, 'utils')
-        if utils_dir not in sys.path:
-            sys.path.insert(0, utils_dir)
-        from preprocess import normalize_patch
-        from metrics import focal_loss, iou_score, dice_coef
+from utils.metrics import focal_loss, iou_score, dice_coef
+from utils.preprocess import normalize_patch
 
 def load_model_safe(model_path):
     """Safely load model with proper custom objects handling"""
@@ -57,12 +40,12 @@ def load_model_safe(model_path):
         try:
             if strategy is None:
                 # Load without compilation
-                model = tf.keras.models.load_model(model_path, compile=False)
+                model = keras.models.load_model(model_path, compile=False)
                 print(f"✅ Strategy {i}: Loaded without compilation")
                 break
             else:
                 # Load with custom objects
-                model = tf.keras.models.load_model(model_path, custom_objects=strategy)
+                model = keras.models.load_model(model_path, custom_objects=strategy)
                 print(f"✅ Strategy {i}: Loaded with custom objects")
                 break
                 
