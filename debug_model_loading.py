@@ -1,4 +1,5 @@
 import tensorflow as tf
+import keras
 import h5py
 import json
 
@@ -41,7 +42,7 @@ def inspect_saved_model(model_path):
     
     # 1. Load without any custom objects
     try:
-        model = tf.keras.models.load_model(model_path, compile=False)
+        model = keras.models.load_model(model_path, compile=False)
         print("✅ 1. Load without compilation: SUCCESS")
         print(f"   Model summary: {len(model.layers)} layers")
         del model
@@ -55,7 +56,7 @@ def inspect_saved_model(model_path):
             'iou_score': iou_score,
             'dice_coef': dice_coef,
         }
-        model = tf.keras.models.load_model(model_path, custom_objects=custom_objects)
+        model = keras.models.load_model(model_path, custom_objects=custom_objects)
         print("✅ 2. Load with iou_score + dice_coef: SUCCESS")
         del model
     except Exception as e:
@@ -69,7 +70,7 @@ def inspect_saved_model(model_path):
             'dice_coef': dice_coef,
             'focal_loss': focal_loss,
         }
-        model = tf.keras.models.load_model(model_path, custom_objects=custom_objects)
+        model = keras.models.load_model(model_path, custom_objects=custom_objects)
         print("✅ 3. Load with focal_loss function: SUCCESS")
         del model
     except Exception as e:
@@ -83,7 +84,7 @@ def inspect_saved_model(model_path):
             'dice_coef': dice_coef,
             'focal_loss_fixed': focal_loss(),
         }
-        model = tf.keras.models.load_model(model_path, custom_objects=custom_objects)
+        model = keras.models.load_model(model_path, custom_objects=custom_objects)
         print("✅ 4. Load with focal_loss_fixed: SUCCESS")
         del model
     except Exception as e:
@@ -99,7 +100,7 @@ def inspect_saved_model(model_path):
             'focal_loss_fixed': focal_loss(),
             'focal_loss_fixed_inner': focal_loss()
         }
-        model = tf.keras.models.load_model(model_path, custom_objects=custom_objects)
+        model = keras.models.load_model(model_path, custom_objects=custom_objects)
         print("✅ 5. Load with all combinations: SUCCESS")
         del model
     except Exception as e:
