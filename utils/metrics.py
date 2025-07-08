@@ -4,6 +4,7 @@ import tensorflow as tf
 import keras
 import keras.backend as K
 
+@keras.saving.register_keras_serializable()
 def iou_score(y_true, y_pred, smooth=1e-6):
     """Intersection over Union metric for binary segmentation"""
     y_true = tf.cast(y_true, tf.float32)
@@ -12,6 +13,7 @@ def iou_score(y_true, y_pred, smooth=1e-6):
     union = tf.reduce_sum(y_true) + tf.reduce_sum(y_pred) - intersection
     return (intersection + smooth) / (union + smooth)
 
+@keras.saving.register_keras_serializable()
 def dice_coef(y_true, y_pred, smooth=1e-6):
     """Dice coefficient for binary segmentation"""
     y_true = tf.cast(y_true, tf.float32)
@@ -21,6 +23,7 @@ def dice_coef(y_true, y_pred, smooth=1e-6):
     intersection = tf.reduce_sum(y_true_f * y_pred_f)
     return (2. * intersection + smooth) / (tf.reduce_sum(y_true_f) + tf.reduce_sum(y_pred_f) + smooth)
 
+@keras.saving.register_keras_serializable()
 def focal_loss(gamma=2.0, alpha=0.25):
     """Focal loss for handling class imbalance"""
     def focal_loss_fixed(y_true, y_pred):
