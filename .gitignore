@@ -1,32 +1,32 @@
-# Model outputs and artifacts
-# outputs/final_model.h5
-outputs/logs/training_log.csv
-outputs/plots/training_history.png
-outputs/predictions/prediction.txt.txt
+# # Model outputs and artifacts
+# # outputs/final_model.h5
+# outputs/logs/training_log.csv
+# outputs/plots/training_history.png
+# outputs/predictions/prediction.txt.txt
 
-# Keep directory structure but ignore large files
-# outputs/**
-!outputs/blank.txt
-!outputs/logs/
-!outputs/plots/
-!outputs/predictions/
+# # Keep directory structure but ignore large files
+# # outputs/**
+# !outputs/blank.txt
+# !outputs/logs/
+# !outputs/plots/
+# !outputs/predictions/
 
-# Model checkpoints and saved models
-# *.h5
-*.hdf5
-*.pkl
-*.model
-*.weights
+# # Model checkpoints and saved models
+# # *.h5
+# *.hdf5
+# *.pkl
+# *.model
+# *.weights
 
-# Training logs and temporary files
-*.log
-training_*.csv
-validation_*.csv
-*.tmp
+# # Training logs and temporary files
+# *.log
+# training_*.csv
+# validation_*.csv
+# *.tmp
 
-# Dataset cache
-dataset_cache/
-*.cache
+# # Dataset cache
+# dataset_cache/
+# *.cache
 
 # Python cache
 __pycache__/
@@ -34,28 +34,28 @@ __pycache__/
 *.pyo
 *.pyd
 
-# IDE files
-.vscode/
-.idea/
-*.swp
-*.swo
+# # IDE files
+# .vscode/
+# .idea/
+# *.swp
+# *.swo
 
-# OS files
-.DS_Store
-Thumbs.db
+# # OS files
+# .DS_Store
+# Thumbs.db
 
-# Virtual environment (if created locally)
-venv/
-env/
-.env
+# # Virtual environment (if created locally)
+# venv/
+# env/
+# .env
 
-# Jupyter notebook checkpoints
-.ipynb_checkpoints/
+# # Jupyter notebook checkpoints
+# .ipynb_checkpoints/
 
-# Large prediction outputs
-predictions_*.tif
-predictions_*.tiff
-large_predictions/
+# # Large prediction outputs
+# predictions_*.tif
+# predictions_*.tiff
+# large_predictions/
 
-# Ignore the entire lfs directory for now
-# lfs/
+# # Ignore the entire lfs directory for now
+# # lfs/
