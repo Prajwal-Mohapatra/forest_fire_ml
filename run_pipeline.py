@@ -47,7 +47,7 @@ def run_training(data_dir, config=None):
     print(f"Configuration: {config}")
     
     # Import and run training
-    from train_optimized import main
+    from train import main
     main()
     
     print("✅ Training completed successfully!")
