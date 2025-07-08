@@ -132,7 +132,7 @@ def main():
     # Callbacks
     callbacks = [
         ModelCheckpoint(
-            f'{output_dir}/checkpoints/best_model.h5',
+            f'{output_dir}/checkpoints/best_model.keras',
             monitor='val_iou_score',
             save_best_only=True,
             mode='max',
@@ -170,7 +170,7 @@ def main():
     
     # Save final model
     model.export(f'{output_dir}/final_model.keras')
-    print(f"Training completed! Model saved to {output_dir}/final_model.h5")
+    print(f"Training completed! Model saved to {output_dir}/final_model.keras")
 
 def plot_training_history(history, output_dir):
     """Plot and save training history"""

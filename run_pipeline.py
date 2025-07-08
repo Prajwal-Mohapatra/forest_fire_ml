@@ -87,7 +87,7 @@ def main():
                        default='full', help='Pipeline mode')
     parser.add_argument('--data_dir', type=str, required=True, 
                        help='Directory containing stacked TIF files')
-    parser.add_argument('--model_path', type=str, default='outputs/checkpoints/best_model.h5',
+    parser.add_argument('--model_path', type=str, default='outputs/checkpoints/best_model.keras',
                        help='Path to trained model')
     parser.add_argument('--input_tif', type=str, help='Input TIF file for prediction')
     parser.add_argument('--output_path', type=str, default='outputs/predictions/fire_probability.tif',

@@ -19,7 +19,7 @@ def run_demo_simulation():
     print("="*50)
     
     # Configuration
-    MODEL_PATH = "outputs/final_model.h5"
+    MODEL_PATH = "outputs/final_model.keras"
     DATA_DIRECTORY = "../../refined_dataset_stacking"  # Adjust as needed
     
     try:

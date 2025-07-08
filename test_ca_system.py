@@ -128,7 +128,7 @@ class MockMLCAIntegration:
         
         exec(integration_code)
         mock_integration = locals()['MockMLCAIntegration'](
-            "mock_model.h5", 
+            "mock_model.keras", 
             "mock_data_dir"
         )
         

@@ -230,7 +230,7 @@ def calculate_additional_metrics(y_true, y_pred, threshold=0.5):
 # Test function to run evaluation
 if __name__ == "__main__":
     # Example usage
-    model_path = "/kaggle/working/forest_fire_ml/outputs/final_model.h5"
+    model_path = "/kaggle/working/forest_fire_ml/outputs/final_model.keras"
     test_files = []  # Add your test files here
     
     if test_files:
