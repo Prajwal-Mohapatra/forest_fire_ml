@@ -2,6 +2,13 @@
 
 _AI-Powered Fire Probability Prediction and Spread Simulation_
 
+![Python](https://img.shields.io/badge/Python-3.8+-blue?logo=python&logoColor=white)
+![TensorFlow](https://img.shields.io/badge/TensorFlow-2.16+-orange?logo=tensorflow&logoColor=white)
+![Deep Learning](https://img.shields.io/badge/Deep%20Learning-ResUNet--A-red?logo=ai&logoColor=white)
+![Geospatial](https://img.shields.io/badge/Geospatial-30m%20Resolution-green?logo=esri&logoColor=white)
+![ISRO BAH](https://img.shields.io/badge/ISRO%20BAH-Hackathon%202025-gold?logo=rocket&logoColor=white)
+![Status](https://img.shields.io/badge/Status-Active%20Development-success)
+
 ## ISRO BAH Hackathon 2025 Submission
 
 **Team:** The Minions  
@@ -9,10 +16,11 @@ _AI-Powered Fire Probability Prediction and Spread Simulation_
 **Technology Stack:** Geospatial Analysis + Deep Learning + Cellular Automata
 
 ### Project Resources
+
 - **Primary Repository:** [Forest Fire Spread System](https://github.com/Prajwal-Mohapatra/forest_fire_spread)
 - **Model Development:** [ML Implementation](https://github.com/Prajwal-Mohapatra/forest_fire_ml)
-- **Raw Dataset:** *Private dataset on Kaggle*
-- **Processed Dataset:** *Private dataset on Kaggle*
+- **Raw Dataset:** _Private dataset on Kaggle_
+- **Processed Dataset:** _Private dataset on Kaggle_
 - **Design & Architecture:** [System Wireframes](https://www.figma.com/design/YeS8pwYnDU9ZhLxeAP6ZHH/ISRO-BAH-Hackathon-2025?node-id=0-1&t=EEjAIq96FQ77oQAR-1) (Figma)
 
 ---
@@ -24,7 +32,7 @@ _AI-Powered Fire Probability Prediction and Spread Simulation_
 Our system, **dual-phase forest fire prediction and simulation platform**, combines:
 
 1. **ResUNet-A Deep Learning Model** - Predicts fire probability from multi-spectral satellite imagery, stacked into a 10-band raster image
-2. **Cellular Automata Engine** - Simulates *realistic* fire spread dynamics *with physics-based rules* (realistic part, to be added in the future)
+2. **Cellular Automata Engine** - Simulates _realistic_ fire spread dynamics _with physics-based rules_ (realistic part, to be added in the future)
 3. **Interactive Web Interface** - Allows real-time scenario testing, visualization and sending & receiving of alerts
 4. **Comprehensive Data Pipeline** - Processes Landsat 8, MODIS, SRTM, Sentinel-2 and auxiliary geospatial datasets
 
@@ -120,14 +128,14 @@ class FireSpreadEngine:
 
 ### 1. **Technical Challenges**
 
-- **Geospatial Data Complexity:** Managing multi-temporal, multi-sensor datasets requires sophisticated preprocessing pipelines *(plans automate the pipeline, from data collection to stacking)*
+- **Geospatial Data Complexity:** Managing multi-temporal, multi-sensor datasets requires sophisticated preprocessing pipelines _(plans automate the pipeline, from data collection to stacking)_
 - Focal loss + fire-focused sampling reduced false negatives by 60%
 - Sliding window prediction with 64-pixel overlap enables processing of large geographical areas efficiently
 - Cellular automata simulation must balance accuracy with computational speed for web deployment
 
 ### 2. **Domain Exploration**
 
-- *Wind speed/direction critically affects spread patterns (2x faster in wind direction) (to be implemented in the future)*
+- _Wind speed/direction critically affects spread patterns (2x faster in wind direction) (to be implemented in the future)_
 - **Satellite Remote Sensing:** NIR (Near Infrared) and SWIR (Short-wave Infrared) bands (absored by burning and burned areas) most informative for fire detection
 - Fire activity shows strong diurnal patterns requiring time-aware modeling
 - **Geospatial Analysis:** 30m resolution optimal balance between detail and computational feasibility
@@ -196,13 +204,12 @@ This enables forest departments, disaster management agencies, and researchers t
 
 ## References
 
-1. Diakogiannis, F. I., Waldner, F., Caccetta, P., & Wu, C. (2020). ResUNet-a: A deep learning framework for semantic segmentation of remotely sensed data. *ISPRS Journal of Photogrammetry and Remote Sensing*, 162, 94-114. https://doi.org/10.1016/j.isprsjprs.2020.01.013
+1. Diakogiannis, F. I., Waldner, F., Caccetta, P., & Wu, C. (2020). ResUNet-a: A deep learning framework for semantic segmentation of remotely sensed data. _ISPRS Journal of Photogrammetry and Remote Sensing_, 162, 94-114. https://doi.org/10.1016/j.isprsjprs.2020.01.013
 
-2. Huot, F., Hu, R. L., Goyal, N., Sankar, T., Ihme, M., & Chen, Y. F. (2022). Next day wildfire spread: A machine learning dataset to predict wildfire spreading from remote-sensing data. *IEEE Transactions on Geoscience and Remote Sensing*, 60, 1-13. https://doi.org/10.1109/TGRS.2022.3192974
+2. Huot, F., Hu, R. L., Goyal, N., Sankar, T., Ihme, M., & Chen, Y. F. (2022). Next day wildfire spread: A machine learning dataset to predict wildfire spreading from remote-sensing data. _IEEE Transactions on Geoscience and Remote Sensing_, 60, 1-13. https://doi.org/10.1109/TGRS.2022.3192974
 
-3. Karafyllidis, I., & Thanailakis, A. (1997). A model for predicting forest fire spreading using cellular automata. *Ecological Modelling*, 99(1), 87-97. https://doi.org/10.1016/S0304-3800(96)01942-4
+3. Karafyllidis, I., & Thanailakis, A. (1997). A model for predicting forest fire spreading using cellular automata. _Ecological Modelling_, 99(1), 87-97. https://doi.org/10.1016/S0304-3800(96)01942-4
 
 4. United Nations, Department of Economic and Social Affairs - Sustainable Development. (2015). Transforming our world: The 2030 Agenda for Sustainable Development (A/RES/70/1). https://sdgs.un.org/2030agenda
 
-5. Forest Survey of India. (2023). *India State of Forest Report 2023*. Ministry of Environment, Forest and Climate Change, Government of India. https://fsi.nic.in/forest-report-2023
-
+5. Forest Survey of India. (2023). _India State of Forest Report 2023_. Ministry of Environment, Forest and Climate Change, Government of India. https://fsi.nic.in/forest-report-2023
