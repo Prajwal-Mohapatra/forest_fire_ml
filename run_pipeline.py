@@ -52,11 +52,39 @@ def run_prediction(model_path, input_tif, output_path):
     print("🔮 Starting Fire Probability Prediction...")
     
     from predict import predict_fire_probability
-    prediction = predict_fire_probability(model_path, input_tif, output_path)
     
-    # Visualize results
-    from utils.visualization import visualize_fire_prediction
-    visualize_fire_prediction(output_path, f"{output_path.replace('.tif', '_visualization.png')}")
+    # Check if output_path is a directory or file
+    if os.path.isdir(output_path) or not output_path.endswith('.tif'):
+        # If it's a directory, create output directory
+        output_dir = output_path
+        os.makedirs(output_dir, exist_ok=True)
+        
+        prediction = predict_fire_probability(
+            model_path=model_path,
+            input_tif_path=input_tif,
+            output_dir=output_dir
+        )
+        
+        # Use the binary map for visualization
+        binary_map_path = os.path.join(output_dir, 'fire_binary_map.tif')
+        if os.path.exists(binary_map_path):
+            # Visualize results
+            from utils.visualization import visualize_fire_prediction
+            visualize_fire_prediction(binary_map_path, os.path.join(output_dir, 'fire_prediction_visualization.png'))
+    else:
+        # If it's a file path, use the directory for output
+        output_dir = os.path.dirname(output_path)
+        os.makedirs(output_dir, exist_ok=True)
+        
+        prediction = predict_fire_probability(
+            model_path=model_path,
+            input_tif_path=input_tif,
+            output_dir=output_dir
+        )
+        
+        # Visualize results
+        from utils.visualization import visualize_fire_prediction
+        visualize_fire_prediction(output_path, f"{output_path.replace('.tif', '_visualization.png')}")
     
     print("✅ Prediction completed successfully!")
 
