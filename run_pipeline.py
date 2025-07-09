@@ -33,19 +33,6 @@ def setup_environment():
 def run_training(data_dir, config=None):
     """Run model training"""
     
-    if config is None:
-        config = {
-            'patch_size': 256,
-            'batch_size': 8,
-            'n_patches_per_img': 30,
-            'epochs': 50,
-            'learning_rate': 1e-4,
-            'fire_focus_ratio': 0.8,
-        }
-    
-    print("🔥 Starting Fire Prediction Model Training...")
-    print(f"Configuration: {config}")
-    
     # Import and run training
     from train import main
     main()
