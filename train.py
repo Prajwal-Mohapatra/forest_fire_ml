@@ -68,14 +68,14 @@ def create_datasets(base_dir):
     # val_files = [f for f in all_files if '2016_05_' in f and int(f.split('_')[-1].split('.')[0]) <= 15]
     # test_files = [f for f in all_files if '2016_05_' in f and int(f.split('_')[-1].split('.')[0]) > 15]
 
-    # # New Temporal split: Early April (1-20) for training, late April for validation, full May for testing
-    # train_files = [f for f in all_files if '2016_04_' in f and int(f.split('_')[-1].split('.')[0]) <= 20]
-    # val_files = [f for f in all_files if '2016_04_' in f and int(f.split('_')[-1].split('.')[0]) > 20]
-    # test_files = [f for f in all_files if '2016_05_' in f]
+    # New Temporal split: Early April (1-20) for training, late April for validation, full May for testing
+    train_files = [f for f in all_files if '2016_04_' in f and int(f.split('_')[-1].split('.')[0]) <= 20]
+    val_files = [f for f in all_files if '2016_04_' in f and int(f.split('_')[-1].split('.')[0]) > 20]
+    test_files = [f for f in all_files if '2016_05_' in f]
 
-    # Random split: 80% training + validation, 20% testing; 80% -> 80% training & 20% validation
-    train_val_files, test_files = train_test_split(all_files, test_size=0.2, random_state=42)
-    train_files, val_files = train_test_split(train_val_files, test_size=0.2, random_state=42)
+    # # Random split: 80% training + validation, 20% testing; 80% -> 80% training & 20% validation
+    # train_val_files, test_files = train_test_split(all_files, test_size=0.2, random_state=42)
+    # train_files, val_files = train_test_split(train_val_files, test_size=0.2, random_state=42)
     
     print(f"Train files: {len(train_files)}")
     print(f"Val files: {len(val_files)}")
@@ -89,7 +89,7 @@ def main():
         'patch_size': 256,
         'batch_size': 8,
         'n_patches_per_img': 30,
-        'epochs': 1,
+        'epochs': 5,
         'learning_rate': 1e-4,
         'fire_focus_ratio': 0.8,
     }
