@@ -1,5 +1,3 @@
-# 6. train_optimized.py
-# ====================
 import os
 import glob
 import matplotlib.pyplot as plt
@@ -28,8 +26,8 @@ if gpus:
 class TrainingMonitor(keras.callbacks.Callback):
     def __init__(self):
         super().__init__()
-        self.train_metrics = []
-        self.val_metrics = []
+        # self.train_metrics = []
+        # self.val_metrics = []
     
     def on_epoch_end(self, epoch, logs=None):
         # Log GPU memory usage
@@ -42,19 +40,19 @@ class TrainingMonitor(keras.callbacks.Callback):
                 pass
         
         # Store metrics
-        self.train_metrics.append({
-            'epoch': epoch,
-            'loss': logs.get('loss'),
-            'iou': logs.get('iou_score'),
-            'dice': logs.get('dice_coef')
-        })
+        # self.train_metrics.append({
+        #     'epoch': epoch,
+        #     'loss': logs.get('loss'),
+        #     'iou': logs.get('iou_score'),
+        #     'dice': logs.get('dice_coef')
+        # })
         
-        self.val_metrics.append({
-            'epoch': epoch,
-            'val_loss': logs.get('val_loss'),
-            'val_iou': logs.get('val_iou_score'),
-            'val_dice': logs.get('val_dice_coef')
-        })
+        # self.val_metrics.append({
+        #     'epoch': epoch,
+        #     'val_loss': logs.get('val_loss'),
+        #     'val_iou': logs.get('val_iou_score'),
+        #     'val_dice': logs.get('val_dice_coef')
+        # })
 
 def create_datasets(base_dir):
     """Create train/val/test splits with temporal awareness"""
@@ -90,6 +88,9 @@ def main():
         'learning_rate': 1e-4,
         'fire_focus_ratio': 0.8,
     }
+    
+    print("🔥 Starting Fire Prediction Model Training...")
+    print(f"Configuration: {CONFIG}")
     
     # Paths
     base_dir = '/kaggle/input/stacked-fire-probability-prediction-dataset/dataset_stacked'
