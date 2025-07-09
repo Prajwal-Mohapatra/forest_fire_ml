@@ -26,8 +26,8 @@ if gpus:
 class TrainingMonitor(keras.callbacks.Callback):
     def __init__(self):
         super().__init__()
-        # self.train_metrics = []
-        # self.val_metrics = []
+        self.train_metrics = []
+        self.val_metrics = []
     
     def on_epoch_end(self, epoch, logs=None):
         # Log GPU memory usage
@@ -40,19 +40,19 @@ class TrainingMonitor(keras.callbacks.Callback):
                 pass
         
         # Store metrics
-        # self.train_metrics.append({
-        #     'epoch': epoch,
-        #     'loss': logs.get('loss'),
-        #     'iou': logs.get('iou_score'),
-        #     'dice': logs.get('dice_coef')
-        # })
+        self.train_metrics.append({
+            'epoch': epoch,
+            'loss': logs.get('loss'),
+            'iou': logs.get('iou_score'),
+            'dice': logs.get('dice_coef')
+        })
         
-        # self.val_metrics.append({
-        #     'epoch': epoch,
-        #     'val_loss': logs.get('val_loss'),
-        #     'val_iou': logs.get('val_iou_score'),
-        #     'val_dice': logs.get('val_dice_coef')
-        # })
+        self.val_metrics.append({
+            'epoch': epoch,
+            'val_loss': logs.get('val_loss'),
+            'val_iou': logs.get('val_iou_score'),
+            'val_dice': logs.get('val_dice_coef')
+        })
 
 def create_datasets(base_dir):
     """Create train/val/test splits with temporal awareness"""
@@ -62,8 +62,13 @@ def create_datasets(base_dir):
         raise ValueError(f"No files found in {base_dir}")
     
     print(f"Found {len(all_files)} files")
-    
-    # Temporal split: Early April (1-20) for training, late April for validation, full May for testing
+        
+    # # Old Temporal split: April (1-30) for training, early May (1-15) for validation, late May (16-29) for testing
+    # train_files = [f for f in all_files if '2016_04_' in f]
+    # val_files = [f for f in all_files if '2016_05_' in f and int(f.split('_')[-1].split('.')[0]) <= 15]
+    # test_files = [f for f in all_files if '2016_05_' in f and int(f.split('_')[-1].split('.')[0]) > 15]
+
+    # # New Temporal split: Early April (1-20) for training, late April for validation, full May for testing
     # train_files = [f for f in all_files if '2016_04_' in f and int(f.split('_')[-1].split('.')[0]) <= 20]
     # val_files = [f for f in all_files if '2016_04_' in f and int(f.split('_')[-1].split('.')[0]) > 20]
     # test_files = [f for f in all_files if '2016_05_' in f]
@@ -177,7 +182,7 @@ def main():
     plot_training_history(history, output_dir)
     
     # Save final model
-    model.export(f'{output_dir}/final_model.keras')
+    model.save(f'{output_dir}/final_model.keras', save_format="keras_v3") # model.export = bad, saves to a directory structured, SavedModel format
     print(f"Training completed! Model saved to {output_dir}/final_model.keras")
 
 def plot_training_history(history, output_dir):
