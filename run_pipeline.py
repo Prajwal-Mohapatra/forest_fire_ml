@@ -1,6 +1,3 @@
-# ====================
-# 10. run_pipeline.py
-# ====================
 """
 Complete pipeline script for fire prediction model training and evaluation
 """
@@ -20,9 +17,6 @@ def setup_environment():
         'outputs/logs',
         'outputs/plots',
         'outputs/predictions',
-        'utils',
-        'model',
-        'dataset'
     ]
     
     for directory in directories:

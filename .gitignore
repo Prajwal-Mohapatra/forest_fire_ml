@@ -50,6 +50,7 @@ outputs/checkpoints/
 outputs/temp_*
 
 # Keep directory structure but ignore large files
+outputs
 outputs/**
 !outputs/blank.txt
 !outputs/final_model.h5

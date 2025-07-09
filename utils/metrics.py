@@ -1,5 +1,3 @@
-#====== metrics.py ======
-
 import tensorflow as tf
 import keras
 import keras.backend as K

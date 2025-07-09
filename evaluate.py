@@ -15,21 +15,9 @@ def load_model_safe(model_path):
     
     # Define all possible custom objects the model might need
     custom_objects = {
-        # Loss function (the one that works)
-        'focal_loss_fixed': focal_loss(),
-        
-        # Metrics - try different possible names
+        "focal_loss_fixed": focal_loss(gamma=2.0, alpha=0.25),        
         'iou_score': iou_score,
         'dice_coef': dice_coef,
-        
-        # Alternative names that might have been saved
-        'iou_score_1': iou_score,
-        'dice_coef_1': dice_coef,
-        'iou_score_2': iou_score,
-        'dice_coef_2': dice_coef,
-        
-        # Also include the factory function
-        'focal_loss': focal_loss,
     }
     
     print(f"🔄 Attempting to load model from: {model_path}")
@@ -38,7 +26,7 @@ def load_model_safe(model_path):
     strategies = [
         # Strategy 1: Load with focal_loss_fixed only (we know this works)
         {
-            'focal_loss_fixed': focal_loss(),
+            'focal_loss': focal_loss(),
         },
         
         # Strategy 2: Load without compilation (fallback)
