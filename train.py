@@ -12,6 +12,9 @@ from dataset.loader import FireDatasetGenerator
 from utils.metrics import iou_score, dice_coef, focal_loss
 from keras.callbacks import ModelCheckpoint, EarlyStopping, ReduceLROnPlateau, CSVLogger
 
+from sklearn.model_selection import train_test_split
+
+
 # Configure GPU
 gpus = tf.config.experimental.list_physical_devices('GPU')
 if gpus:
@@ -62,10 +65,14 @@ def create_datasets(base_dir):
     
     print(f"Found {len(all_files)} files")
     
-    # Temporal split: April for training, early May for validation, late May for testing
-    train_files = [f for f in all_files if '2016_04_' in f]
-    val_files = [f for f in all_files if '2016_05_' in f and int(f.split('_')[-1].split('.')[0]) <= 15]
-    test_files = [f for f in all_files if '2016_05_' in f and int(f.split('_')[-1].split('.')[0]) > 15]
+    # Temporal split: Early April (1-20) for training, late April for validation, full May for testing
+    # train_files = [f for f in all_files if '2016_04_' in f and int(f.split('_')[-1].split('.')[0]) <= 20]
+    # val_files = [f for f in all_files if '2016_04_' in f and int(f.split('_')[-1].split('.')[0]) > 20]
+    # test_files = [f for f in all_files if '2016_05_' in f]
+
+    # Random split: 80% training + validation, 20% testing; 80% -> 80% training & 20% validation
+    train_val_files, test_files = train_test_split(all_files, test_size=0.2, random_state=42)
+    train_files, val_files = train_test_split(train_val_files, test_size=0.2, random_state=42)
     
     print(f"Train files: {len(train_files)}")
     print(f"Val files: {len(val_files)}")
