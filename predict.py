@@ -361,7 +361,7 @@ def predict_fire_nextday(model_path, input_tif_path, output_dir,
     )
     
     # Also create confidence zones
-    confidence_map = predict_with_confidence_zones(
+    predict_with_confidence_zones(
         model_path, input_tif_path, output_dir, patch_size, overlap
     )
     
