@@ -1,62 +1,201 @@
-# Model outputs and artifacts
-outputs/final_model.h5
-outputs/logs/training_log.csv
-outputs/plots/training_history.png
-outputs/predictions/prediction.txt.txt
+# =============================================================================
+# FOREST FIRE ML MODULE - GITIGNORE
+# =============================================================================
+# ML-specific gitignore for the forest fire prediction model
+# Part of the unified forest fire prediction system
+# Date: 2025-01-08
+
+# =============================================================================
+# PYTHON
+# =============================================================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environments
+venv/
+ENV/
+env/
+.env
+.venv
+
+# =============================================================================
+# ML MODEL FILES & TRAINING ARTIFACTS
+# =============================================================================
+# Training outputs (keep final models, ignore intermediate artifacts)
+outputs/logs/
+outputs/plots/
+outputs/predictions/
+outputs/*.bak/
+outputs/training_*
+outputs/checkpoints/
+outputs/temp_*
 
 # Keep directory structure but ignore large files
 outputs/**
 !outputs/blank.txt
-!outputs/logs/
-!outputs/plots/
-!outputs/predictions/
+!outputs/final_model.h5
+!outputs/final_model.keras
 
-# Model checkpoints and saved models
+# Model backup files
+*.h5.bak/
+*.keras.bak/
+*.model.bak
+*.keras
+
+# Training checkpoints and temporary models
+checkpoint_*
+model_checkpoint_*
+temp_model_*
+training_*
+best_model_temp*
+
+# Large model files (except final models)
 *.h5
 *.keras
 *.hdf5
 *.pkl
 *.model
 *.weights
+*.ckpt
+*.ckpt.*
+*.pb
+*.pth
+*.pt
 
-# Training logs and temporary files
-*.log
-training_*.csv
-validation_*.csv
-*.tmp
+# But keep final models
+!outputs/final_model.h5
+!outputs/final_model.keras
 
-# Dataset cache
+# TensorFlow/Keras specific
+.keras/
+tensorflow_logs/
+tensorboard_logs/
+tf_logs/
+events.out.tfevents.*
+
+# =============================================================================
+# DATA FILES
+# =============================================================================
+# Processed data (keep small samples, ignore large processed datasets)
+dataset/processed/
+dataset/cache/
+dataset/temp/
+dataset/*.tif
+dataset/*.tiff
 dataset_cache/
 *.cache
 
-Python cache
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
-
-# IDE files
-.vscode/
-.idea/
-*.swp
-*.swo
-
-# OS files
-.DS_Store
-Thumbs.db
-
-# Virtual environment (if created locally)
-venv/
-env/
-.env
-
-# Jupyter notebook checkpoints
-.ipynb_checkpoints/
-
-# Large prediction outputs
+# Generated synthetic data
+outputs/synthetic_*.tif
+outputs/probability_map_*.tif
 predictions_*.tif
 predictions_*.tiff
 large_predictions/
 
-# Ignore the entire lfs directory for now
+# =============================================================================
+# LOGS & MONITORING
+# =============================================================================
+logs/
+*.log
+training.log
+evaluation.log
+model_*.log
+debug_*.log
+training_*.csv
+validation_*.csv
+
+# Monitoring files
+wandb/
+mlruns/
+.mlflow/
+
+# =============================================================================
+# JUPYTER NOTEBOOKS
+# =============================================================================
+.ipynb_checkpoints/
+*-checkpoint.ipynb
+
+# =============================================================================
+# TESTING & DEVELOPMENT
+# =============================================================================
+# Test outputs
+test_outputs/
+test_results/
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+
+# Development artifacts
+debug_*
+temp_*
+scratch_*
+*.tmp
+
+# =============================================================================
+# IDE & EDITOR FILES
+# =============================================================================
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# =============================================================================
+# OS FILES
+# =============================================================================
+.DS_Store
+.DS_Store?
+._*
+Thumbs.db
+
+# =============================================================================
+# CONFIGURATION & SECRETS
+# =============================================================================
+# Environment and config files
+.env
+.env.local
+.env.production
+config.json
+secrets.json
+
+# =============================================================================
+# BACKUP FILES
+# =============================================================================
+*.bak
+*.backup
+*.old
+*~
+.#*
+
+# =============================================================================
+# LFS AND LARGE FILES
+# =============================================================================
+# Git LFS managed files (commented for reference)
 # lfs/
+
+# =============================================================================
+# KEEP THESE IMPORTANT FILES
+# =============================================================================
+# Final trained models are explicitly allowed above
+# Requirements and documentation are not ignored
