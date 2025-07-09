@@ -11,8 +11,8 @@ _AI-Powered Fire Probability Prediction and Spread Simulation_
 ### Project Resources
 - **Primary Repository:** [Forest Fire Spread System](https://github.com/Prajwal-Mohapatra/forest_fire_spread)
 - **Model Development:** [ML Implementation](https://github.com/Prajwal-Mohapatra/forest_fire_ml)
-- **Raw Dataset:** [Unstacked Satellite Data](https://kaggle.com/datasets/9f4a7d0bdf49fd695f3028108915bd3594658cb8e8b89e5c082bf018448ca1e8) (Kaggle)
-- **Processed Dataset:** [Stacked Training Data](https://kaggle.com/datasets/b8f7d15fad5b34501767b80eac0202ff9d1529e924e3fafcf3d1acf38b2b8590) (Kaggle)
+- **Raw Dataset:** *Private dataset on Kaggle*
+- **Processed Dataset:** *Private dataset on Kaggle*
 - **Design & Architecture:** [System Wireframes](https://www.figma.com/design/YeS8pwYnDU9ZhLxeAP6ZHH/ISRO-BAH-Hackathon-2025?node-id=0-1&t=EEjAIq96FQ77oQAR-1) (Figma)
 
 ---
@@ -128,7 +128,7 @@ class FireSpreadEngine:
 ### 2. **Domain Exploration**
 
 - *Wind speed/direction critically affects spread patterns (2x faster in wind direction) (to be implemented in the future)*
-- **Satellite Remote Sensing:** NIR and SWIR bands most informative for fire detection
+- **Satellite Remote Sensing:** NIR (Near Infrared) and SWIR (Short-wave Infrared) bands (absored by burning and burned areas) most informative for fire detection
 - Fire activity shows strong diurnal patterns requiring time-aware modeling
 - **Geospatial Analysis:** 30m resolution optimal balance between detail and computational feasibility
 
@@ -168,7 +168,7 @@ class FireSpreadEngine:
 ### **Technical Milestones**
 
 - **50 Training Epochs** with early stopping and learning rate scheduling
-- **9-Band Multi-spectral** satellite imagery processing
+- **10-Band Multi-spectral** satellite imagery processing
 - **6-Hour Fire Spread** simulation with realistic physics
 - **5 REST API Endpoints** for complete system integration
 - **3-Tier Confidence** mapping (high/medium/low fire risk)
