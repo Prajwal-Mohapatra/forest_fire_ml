@@ -11,52 +11,95 @@ import os
 from utils.metrics import focal_loss, iou_score, dice_coef
 from utils.preprocess import normalize_patch
 
-def load_model_safe(model_path):
-    """Safely load model with proper custom objects handling"""
+# def load_model_safe(model_path):
+#     """Safely load model with proper custom objects handling"""
     
-    print(f"🔄 Attempting to load model from: {model_path}")
+#     print(f"🔄 Attempting to load model from: {model_path}")
     
-    # Try different loading strategies
-    strategies = [
-        # Strategy 1: Load with focal_loss_fixed only (we know this works)
-        {
-            'focal_loss_fixed': focal_loss(),
-        },
+#     # Try different loading strategies
+#     strategies = [
+#         # Strategy 1: Load with focal_loss_fixed only (we know this works)
+#         {
+#             'focal_loss_fixed': focal_loss(),
+#         },
         
-        # Strategy 2: Load without compilation (fallback)
-        None,
+#         # Strategy 2: Load without compilation (fallback)
+#         None,
         
-        # Strategy 3: Load with all possible custom objects
-        {
-            'focal_loss_fixed': focal_loss(),
-            'iou_score': iou_score,
-            'dice_coef': dice_coef,
-            'focal_loss': focal_loss,
-        },
-    ]
+#         # Strategy 3: Load with all possible custom objects
+#         {
+#             'focal_loss_fixed': focal_loss(),
+#             'iou_score': iou_score,
+#             'dice_coef': dice_coef,
+#             'focal_loss': focal_loss,
+#         },
+#     ]
     
-    model = None
-    for i, strategy in enumerate(strategies, 1):
-        try:
-            if strategy is None:
-                # Load without compilation
-                model = keras.models.load_model(model_path, compile=False)
-                print(f"✅ Strategy {i}: Loaded without compilation")
-                break
-            else:
-                # Load with custom objects
-                model = keras.models.load_model(model_path, custom_objects=strategy)
-                print(f"✅ Strategy {i}: Loaded with custom objects")
-                break
+#     model = None
+#     for i, strategy in enumerate(strategies, 1):
+#         try:
+#             if strategy is None:
+#                 # Load without compilation
+#                 model = keras.models.load_model(model_path, compile=False)
+#                 print(f"✅ Strategy {i}: Loaded without compilation")
+#                 break
+#             else:
+#                 # Load with custom objects
+#                 model = keras.models.load_model(model_path, custom_objects=strategy)
+#                 print(f"✅ Strategy {i}: Loaded with custom objects")
+#                 break
                 
-        except Exception as e:
-            print(f"❌ Strategy {i} failed: {str(e)}")
-            continue
+#         except Exception as e:
+#             print(f"❌ Strategy {i} failed: {str(e)}")
+#             continue
     
-    if model is None:
-        raise Exception("Failed to load model with any strategy")
+#     if model is None:
+#         raise Exception("Failed to load model with any strategy")
     
-    return model
+#     return model
+
+
+import tensorflow as tf
+import keras
+import keras.backend as K
+
+@keras.saving.register_keras_serializable()
+def iou_score(y_true, y_pred, smooth=1e-6):
+    """Intersection over Union metric for binary segmentation"""
+    y_true = tf.cast(y_true, tf.float32)
+    y_pred = tf.cast(y_pred > 0.5, tf.float32)
+    intersection = tf.reduce_sum(y_true * y_pred)
+    union = tf.reduce_sum(y_true) + tf.reduce_sum(y_pred) - intersection
+    return (intersection + smooth) / (union + smooth)
+
+@keras.saving.register_keras_serializable()
+def dice_coef(y_true, y_pred, smooth=1e-6):
+    """Dice coefficient for binary segmentation"""
+    y_true = tf.cast(y_true, tf.float32)
+    y_pred = tf.cast(y_pred > 0.5, tf.float32)
+    y_true_f = tf.reshape(y_true, [-1])
+    y_pred_f = tf.reshape(y_pred, [-1])
+    intersection = tf.reduce_sum(y_true_f * y_pred_f)
+    return (2. * intersection + smooth) / (tf.reduce_sum(y_true_f) + tf.reduce_sum(y_pred_f) + smooth)
+
+@keras.saving.register_keras_serializable()
+def focal_loss(gamma=2.0, alpha=0.25):
+    """Focal loss for handling class imbalance"""
+    def focal_loss_fixed(y_true, y_pred):
+        epsilon = keras.backend.epsilon()
+        y_pred = tf.clip_by_value(y_pred, epsilon, 1. - epsilon)
+        p_t = tf.where(tf.equal(y_true, 1), y_pred, 1 - y_pred)
+        alpha_t = tf.where(tf.equal(y_true, 1), alpha, 1 - alpha)
+        focal_weight = alpha_t * tf.pow((1 - p_t), gamma)
+        focal_loss = -focal_weight * tf.math.log(p_t)
+        return tf.reduce_mean(focal_loss)
+    return focal_loss_fixed
+
+custom_objects = {
+        "focal_loss_fixed": focal_loss(gamma=2.0, alpha=0.25),        
+        'iou_score': iou_score,
+        'dice_coef': dice_coef,
+    }
 
 def predict_fire_probability(model_path, input_tif_path, output_dir, 
                            patch_size=256, overlap=64, threshold=0.5,
@@ -79,7 +122,7 @@ def predict_fire_probability(model_path, input_tif_path, output_dir,
     """
     
     # Load model safely
-    model = load_model_safe(model_path)
+    model = keras.models.load_model(model_path, custom_objects=custom_objects)
     
     # Read input image
     try:
@@ -168,6 +211,11 @@ def predict_fire_probability(model_path, input_tif_path, output_dir,
     output_profile = profile.copy()
     output_profile.update(count=1, dtype=rasterio.float32)
     
+    # Remove nodata value that might be incompatible with float32
+    if 'nodata' in output_profile and output_profile['nodata'] is not None:
+        # For float32, use a reasonable nodata value
+        output_profile.update(nodata=-9999.0)
+    
     # Save probability map
     if save_probability:
         prob_path = os.path.join(output_dir, 'fire_probability_map.tif')
@@ -182,7 +230,7 @@ def predict_fire_probability(model_path, input_tif_path, output_dir,
     if save_binary:
         binary_path = os.path.join(output_dir, 'fire_binary_map.tif')
         binary_profile = output_profile.copy()
-        binary_profile.update(dtype=rasterio.uint8)
+        binary_profile.update(dtype=rasterio.uint8, nodata=255)  # Set nodata to 255 for uint8
         
         try:
             with rasterio.open(binary_path, 'w', **binary_profile) as dst:
@@ -265,7 +313,7 @@ def predict_with_confidence_zones(model_path, input_tif_path, output_dir,
     with rasterio.open(input_tif_path) as src:
         profile = src.profile
     
-    profile.update(count=1, dtype=rasterio.uint8)
+    profile.update(count=1, dtype=rasterio.uint8, nodata=255)  # Set nodata to 255 for uint8
     
     try:
         with rasterio.open(confidence_path, 'w', **profile) as dst:
@@ -377,7 +425,7 @@ if __name__ == "__main__":
     
     # Test model loading
     try:
-        model = load_model_safe(model_path)
+        model = keras.models.load_model(model_path, custom_objects=custom_objects)
         print("🎉 Model loaded successfully!")
         print(f"Model input shape: {model.input_shape}")
         print(f"Model output shape: {model.output_shape}")
@@ -404,3 +452,25 @@ if __name__ == "__main__":
         print("   - Ensure input_tif_path points to your satellite image")
         print("   - Model will generate binary fire/no-fire map")
         print("   - Output will be saved as GeoTIFF with same CRS and resolution")
+
+def ensure_output_directory(output_path):
+    """
+    Ensure output directory exists and return appropriate paths
+    
+    Args:
+        output_path: Can be either a directory or a file path
+        
+    Returns:
+        tuple: (output_directory, is_directory_path)
+    """
+    if os.path.isdir(output_path) or (not output_path.endswith('.tif') and not output_path.endswith('.png')):
+        # It's a directory path
+        output_dir = output_path
+        is_directory_path = True
+    else:
+        # It's a file path, use the directory
+        output_dir = os.path.dirname(output_path)
+        is_directory_path = False
+    
+    os.makedirs(output_dir, exist_ok=True)
+    return output_dir, is_directory_path
