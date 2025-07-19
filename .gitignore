@@ -100,6 +100,7 @@ dataset_cache/
 # Generated synthetic data
 outputs/synthetic_*.tif
 outputs/probability_map_*.tif
+outputs/predictions/fire_probability_map.tif
 predictions_*.tif
 predictions_*.tiff
 large_predictions/
