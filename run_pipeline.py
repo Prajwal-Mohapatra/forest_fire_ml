@@ -47,11 +47,11 @@ def run_evaluation(model_path, test_data_dir):
     print(f"✅ Evaluation completed! Results: {results}")
 
 def run_prediction(model_path, input_tif, output_path):
-    """Run fire probability prediction"""
+    """Run comprehensive fire probability prediction with confidence zones"""
     
-    print("🔮 Starting Fire Probability Prediction...")
+    print("🔮 Starting Comprehensive Fire Prediction...")
     
-    from predict import predict_fire_probability
+    from predict import predict_fire_nextday
     
     # Check if output_path is a directory or file
     if os.path.isdir(output_path) or not output_path.endswith('.tif'):
@@ -59,10 +59,14 @@ def run_prediction(model_path, input_tif, output_path):
         output_dir = output_path
         os.makedirs(output_dir, exist_ok=True)
         
-        prediction = predict_fire_probability(
+        # Use predict_fire_nextday for comprehensive prediction (includes confidence zones)
+        prediction = predict_fire_nextday(
             model_path=model_path,
             input_tif_path=input_tif,
-            output_dir=output_dir
+            output_dir=output_dir,
+            threshold=0.05,  # Use optimized threshold
+            patch_size=256,
+            overlap=64
         )
         
         # Use the binary map for visualization
@@ -76,15 +80,21 @@ def run_prediction(model_path, input_tif, output_path):
         output_dir = os.path.dirname(output_path)
         os.makedirs(output_dir, exist_ok=True)
         
-        prediction = predict_fire_probability(
+        # Use predict_fire_nextday for comprehensive prediction (includes confidence zones)
+        prediction = predict_fire_nextday(
             model_path=model_path,
             input_tif_path=input_tif,
-            output_dir=output_dir
+            output_dir=output_dir,
+            threshold=0.05,  # Use optimized threshold
+            patch_size=256,
+            overlap=64
         )
         
-        # Visualize results
-        from utils.visualization import visualize_fire_prediction
-        visualize_fire_prediction(output_path, f"{output_path.replace('.tif', '_visualization.png')}")
+        # Visualize results - use binary map if available, otherwise the specified output path
+        binary_map_path = os.path.join(output_dir, 'fire_binary_map.tif')
+        if os.path.exists(binary_map_path):
+            from utils.visualization import visualize_fire_prediction
+            visualize_fire_prediction(binary_map_path, f"{output_path.replace('.tif', '_visualization.png')}")
     
     print("✅ Prediction completed successfully!")
 
