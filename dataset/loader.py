@@ -60,12 +60,16 @@ class FireDatasetGenerator(Sequence):
                     
                     # Add temporal context
                     for x, y in coords:
+                        # Ensure fire density is a scalar value
+                        fire_patch = fire_mask[y:y+self.patch_size, x:x+self.patch_size]
+                        fire_density = float(np.mean(fire_patch))  # Explicitly convert to Python float
+                        
                         all_samples.append({
                             'tif_path': tif_path,
                             'day_idx': day_idx,
-                            'x': x,
-                            'y': y,
-                            'fire_density': np.mean(fire_mask[y:y+self.patch_size, x:x+self.patch_size])
+                            'x': int(x),  # Ensure coordinates are Python ints
+                            'y': int(y),
+                            'fire_density': fire_density
                         })
                         
             except Exception as e:
@@ -87,26 +91,43 @@ class FireDatasetGenerator(Sequence):
             try:
                 # Load patch
                 with rasterio.open(sample['tif_path']) as src:
+                    # Ensure window coordinates are integers
+                    x, y = int(sample['x']), int(sample['y'])
                     patch = src.read(
                         window=rasterio.windows.Window(
-                            sample['x'], sample['y'], self.patch_size, self.patch_size
+                            x, y, self.patch_size, self.patch_size
                         ),
                         boundless=True, fill_value=0
                     ).astype(np.float32)
                 
-                # Clean data
+                # Clean data and ensure proper shape
                 patch = np.nan_to_num(patch, nan=0.0, posinf=0.0, neginf=0.0)
                 patch = np.moveaxis(patch, 0, -1)  # (H, W, C)
+                
+                # Ensure patch has correct shape
+                if patch.shape[2] != 10:
+                    print(f"⚠️ Unexpected patch shape: {patch.shape}")
+                    continue
                 
                 # Separate features and target
                 img = normalize_patch(patch[:, :, :9])  # First 9 bands
                 mask = (patch[:, :, 9] > 0).astype(np.float32)  # Fire mask
                 mask = np.expand_dims(mask, -1)
                 
-                # Apply augmentation
+                # Ensure arrays are contiguous and proper dtype
+                img = np.ascontiguousarray(img, dtype=np.float32)
+                mask = np.ascontiguousarray(mask, dtype=np.float32)
+                
+                # Apply augmentation only if enabled and not in debug mode
                 if self.augment_fn:
-                    augmented = self.augment_fn(image=img, mask=mask)
-                    img, mask = augmented['image'], augmented['mask']
+                    try:
+                        # Ensure arrays are in correct format for albumentations
+                        augmented = self.augment_fn(image=img, mask=mask)
+                        img, mask = augmented['image'], augmented['mask']
+                    except Exception as aug_error:
+                        print(f"⚠️ Augmentation error: {aug_error}")
+                        # Skip augmentation on error
+                        pass
                 
                 X.append(img)
                 Y.append(mask)
