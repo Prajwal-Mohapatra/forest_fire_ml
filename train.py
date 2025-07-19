@@ -89,9 +89,9 @@ def main():
         'patch_size': 256,
         'batch_size': 8,
         'n_patches_per_img': 30,
-        'epochs': 5,
+        'epochs': 50,
         'learning_rate': 1e-4,
-        'fire_focus_ratio': 0.8,
+        'fire_focus_ratio': 0.7,
     }
     
     print("🔥 Starting Fire Prediction Model Training...")
