@@ -105,7 +105,7 @@ def main():
         'factor': 0.5,                # Aggressive LR reduction (not 0.2)
         'min_lr': 1e-7,               # Appropriate minimum
 
-        'debug_mode': False,          # Set to True to disable all augmentation
+        'debug_mode': True,          # Set to True to disable all augmentation
     }
     
     print("🔥 Starting Fire Prediction Model Training...")
