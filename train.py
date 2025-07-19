@@ -201,7 +201,7 @@ def main():
         validation_data=val_gen,
         epochs=CONFIG['epochs'],
         callbacks=callbacks,
-        class_weight=class_weights,
+        # class_weight=class_weights,
         verbose=1
     )
     
