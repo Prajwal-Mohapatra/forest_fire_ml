@@ -84,14 +84,17 @@ def create_datasets(base_dir):
     return train_files, val_files, test_files
 
 def main():
-    # Configuration
+    # Configuration - Enhanced for 50-epoch training with regularization
     CONFIG = {
         'patch_size': 256,
         'batch_size': 8,
-        'n_patches_per_img': 30,
-        'epochs': 50,
-        'learning_rate': 1e-4,
-        'fire_focus_ratio': 0.8,
+        'n_patches_per_img': 25,      # Reduced from 30 for more diversity
+        'epochs': 10,                 # Increased from 5
+        'learning_rate': 5e-5,        # Reduced from 1e-4
+        'fire_focus_ratio': 0.7,      # Reduced from 0.8 for more diversity
+        'focal_gamma': 1.0,           # Reduced from 2.0
+        'focal_alpha': 0.4,           # Increased from 0.25
+        'dropout_rate': 0.3,          # Added dropout for regularization
     }
     
     print("🔥 Starting Fire Prediction Model Training...")
@@ -128,14 +131,17 @@ def main():
         augment=False
     )
     
-    # Build model
-    model = build_resunet_a(input_shape=(CONFIG['patch_size'], CONFIG['patch_size'], 9))
+    # Build model with dropout
+    model = build_resunet_a(
+        input_shape=(CONFIG['patch_size'], CONFIG['patch_size'], 9),
+        dropout_rate=CONFIG['dropout_rate']
+    )
     
     # Compile with focal loss for better class imbalance handling
     optimizer = keras.optimizers.Adam(learning_rate=CONFIG['learning_rate'])
     model.compile(
         optimizer=optimizer,
-        loss=focal_loss(gamma=2.0, alpha=0.25),
+        loss=focal_loss(gamma=CONFIG['focal_gamma'], alpha=CONFIG['focal_alpha']),
         metrics=[iou_score, dice_coef]
     )
     
@@ -153,14 +159,14 @@ def main():
         ),
         EarlyStopping(
             monitor='val_loss',
-            patience=10,
+            patience=15,              # Increased patience for 50 epochs
             restore_best_weights=True,
             verbose=1
         ),
         ReduceLROnPlateau(
             monitor='val_loss',
-            factor=0.5,
-            patience=5,
+            factor=0.2,               # More aggressive reduction
+            patience=7,               # Increased patience
             min_lr=1e-7,
             verbose=1
         ),

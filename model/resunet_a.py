@@ -68,9 +68,13 @@ def atrous_spatial_pyramid_pooling(inputs, filters=256):
     
     return output
 
-def build_resunet_a(input_shape=(256, 256, 9), num_classes=1):
+def build_resunet_a(input_shape=(256, 256, 9), num_classes=1, dropout_rate=0.0):
     """
     Build ResUNet-A architecture for fire prediction
+    Args:
+        input_shape: Input tensor shape
+        num_classes: Number of output classes
+        dropout_rate: Dropout rate for regularization (0.0 = no dropout)
     """
     inputs = Input(input_shape)
     
@@ -98,6 +102,10 @@ def build_resunet_a(input_shape=(256, 256, 9), num_classes=1):
     # Bridge with ASPP
     bridge = atrous_spatial_pyramid_pooling(pool4, 512)
     
+    # Add dropout after bridge if specified
+    if dropout_rate > 0:
+        bridge = Dropout(dropout_rate)(bridge)
+    
     # Decoder
     # Stage 4
     up4 = UpSampling2D((2, 2), interpolation='bilinear')(bridge)
@@ -122,6 +130,10 @@ def build_resunet_a(input_shape=(256, 256, 9), num_classes=1):
     up1 = Concatenate()([up1, conv1])
     up1 = residual_block(up1, 64)
     up1 = residual_block(up1, 64)
+    
+    # Add dropout before final layer if specified
+    if dropout_rate > 0:
+        up1 = Dropout(dropout_rate)(up1)
     
     # Output layer
     outputs = Conv2D(num_classes, 1, activation='sigmoid', padding='same')(up1)

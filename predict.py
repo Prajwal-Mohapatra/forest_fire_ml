@@ -102,7 +102,7 @@ custom_objects = {
     }
 
 def predict_fire_probability(model_path, input_tif_path, output_dir, 
-                           patch_size=256, overlap=64, threshold=0.5,
+                           patch_size=256, overlap=64, threshold=0.15,
                            save_probability=True, save_binary=True):
     """
     Predict fire probability for entire region using sliding window approach
@@ -339,7 +339,7 @@ def predict_with_confidence_zones(model_path, input_tif_path, output_dir,
     return confidence_map
 
 def predict_fire_nextday(model_path, input_tif_path, output_dir, 
-                        threshold=0.5, patch_size=256, overlap=64):
+                        threshold=0.15, patch_size=256, overlap=64):
     """
     Main function to predict fire/no-fire for next day
     Returns binary raster map at 30m resolution
@@ -411,7 +411,7 @@ def predict_fire_map(input_path, model_path=None, output_dir="outputs", **kwargs
         model_path=model_path,
         input_tif_path=input_path,
         output_dir=output_dir,
-        threshold=kwargs.get('threshold', 0.5),
+        threshold=kwargs.get('threshold', 0.15),
         patch_size=kwargs.get('patch_size', 256),
         overlap=kwargs.get('overlap', 64)
     )
@@ -439,7 +439,7 @@ if __name__ == "__main__":
             model_path=model_path,
             input_tif_path=input_tif_path,
             output_dir=output_dir,
-            threshold=0.5  # Adjust threshold as needed
+            threshold=0.15  # Adjusted threshold for better detection
         )
         
         print("\n📊 FINAL RESULTS:")
