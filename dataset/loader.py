@@ -20,29 +20,28 @@ class FireDatasetGenerator(Sequence):
         self.shuffle = shuffle
         self.fire_focus_ratio = fire_focus_ratio
         
-        # Setup enhanced augmentation pipeline for fire detection (Fixed warnings)
+        # Setup augmentation pipeline - Multi-channel compatible (9-band satellite data)
         self.augment_fn = None
         if augment:
             self.augment_fn = A.Compose([
-                # Geometric augmentations
+                # Geometric augmentations (work with any number of channels)
                 A.HorizontalFlip(p=0.5),
                 A.VerticalFlip(p=0.5),
                 A.RandomRotate90(p=0.5),
-                A.Affine(shear=(-10, 10), rotate=(-15, 15), scale=(0.9, 1.1), translate_percent=(-0.1, 0.1), p=0.3),  # Fixed: was ShiftScaleRotate
+                A.Affine(shear=(-10, 10), rotate=(-15, 15), scale=(0.9, 1.1), translate_percent=(-0.1, 0.1), p=0.3),
                 
-                # Photometric augmentations (fire-aware)
+                # Photometric augmentations (multi-channel compatible)
                 A.RandomBrightnessContrast(brightness_limit=0.2, contrast_limit=0.2, p=0.4),
                 A.RandomGamma(gamma_limit=(80, 120), p=0.3),  # Fire thermal variations
-                A.HueSaturationValue(hue_shift_limit=10, sat_shift_limit=15, val_shift_limit=10, p=0.3),
+                # Removed: HueSaturationValue (only works with 1 or 3 channels)
                 
-                # Noise and blur (simulate atmospheric conditions)
-                A.GaussNoise(var_limit=50, p=0.2),  # Fixed: single value instead of tuple
+                # Noise and blur (work with any number of channels)
+                A.GaussNoise(var_limit=50, p=0.2),
                 A.GaussianBlur(blur_limit=(1, 3), p=0.1),
                 A.MotionBlur(blur_limit=3, p=0.1),
                 
-                # Weather simulation augmentations  
-                A.RandomFog(fog_coef_range=(0.1, 0.3), alpha_coef=0.08, p=0.1),  # Fixed: fog_coef_range instead of separate limits
-                A.RandomShadow(shadow_roi=(0, 0.3, 1, 1), num_shadows_limit=(1, 2), p=0.1),  # Fixed: num_shadows_limit instead of separate limits
+                # Weather simulation (removed - RGB only)
+                # Removed: RandomFog, RandomShadow (designed for RGB images)
             ])
         
         # Pre-compute patch coordinates for each day
