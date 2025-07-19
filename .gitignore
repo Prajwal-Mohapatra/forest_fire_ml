@@ -53,18 +53,10 @@ outputs/final_model.keras
 outputs/*.h5
 outputs/*.keras
 
-# Keep directory structure but ignore large files
-outputs
-outputs/**
-!outputs/blank.txt
-!outputs/final_model.h5
-!outputs/final_model.keras
-
 # Model backup files
 *.h5.bak/
 *.keras.bak/
 *.model.bak
-*.keras
 
 # Training checkpoints and temporary models
 checkpoint_*
@@ -73,7 +65,7 @@ temp_model_*
 training_*
 best_model_temp*
 
-# Large model files (except final models)
+# Large model files (globally ignore)
 *.h5
 *.keras
 *.hdf5
@@ -85,10 +77,6 @@ best_model_temp*
 *.pb
 *.pth
 *.pt
-
-# But keep final models
-!outputs/final_model.h5
-!outputs/final_model.keras
 
 # TensorFlow/Keras specific
 .keras/
