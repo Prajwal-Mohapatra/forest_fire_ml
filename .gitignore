@@ -49,6 +49,9 @@ outputs/training_*
 outputs/checkpoints/
 outputs/temp_*
 outputs/final_model.h5
+outputs/final_model.keras
+outputs/*.h5
+outputs/*.keras
 
 # Keep directory structure but ignore large files
 outputs
