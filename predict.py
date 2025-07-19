@@ -276,28 +276,37 @@ def predict_fire_probability(model_path, input_tif_path, output_dir,
         'metadata': metadata
     }
 
-def predict_with_confidence_zones(results):
+def predict_with_confidence_zones(input_tif_path, output_dir, results=None):
     """
-    Predict fire probability with confidence zones
+    Predict fire probability with confidence zones optimized for low-probability model outputs
     
-    Creates multiple threshold maps:
-    - High confidence fire (>0.8)
-    - Medium confidence fire (0.5-0.8)
-    - Low confidence fire (0.3-0.5)
-    - No fire (<0.3)
+    Creates multiple threshold maps based on model's actual output range:
+    - High confidence fire (>0.1)    # Top 10% of model range (0.1-0.16)
+    - Medium confidence fire (0.05-0.1)  # Medium range, above binary threshold
+    - Low confidence fire (0.02-0.05)    # Below binary threshold but above background
+    - No fire (<0.02)                    # Background/no-fire
     """
     
-    # Get probability map
+    # Get probability map    
     prediction = results['probability_map']
     
-    # Create confidence zones
+    # Debug: Print prediction statistics for threshold tuning
+    print(f"\n📊 Probability Distribution for Confidence Zones:")
+    print(f"  - Min: {prediction.min():.4f}")
+    print(f"  - Max: {prediction.max():.4f}")
+    print(f"  - Mean: {prediction.mean():.4f}")
+    print(f"  - 95th percentile: {np.percentile(prediction, 95):.4f}")
+    print(f"  - 90th percentile: {np.percentile(prediction, 90):.4f}")
+    print(f"  - 75th percentile: {np.percentile(prediction, 75):.4f}")
+    
+    # Create confidence zones with optimized thresholds for low-probability model
     confidence_map = np.zeros_like(prediction, dtype=np.uint8)
     
-    # Assign confidence levels
-    confidence_map[prediction >= 0.8] = 4  # High confidence fire
-    confidence_map[(prediction >= 0.5) & (prediction < 0.8)] = 3  # Medium confidence fire
-    confidence_map[(prediction >= 0.3) & (prediction < 0.5)] = 2  # Low confidence fire
-    confidence_map[prediction < 0.3] = 1  # No fire
+    # Assign confidence levels based on model's actual output range (0.0-0.16)
+    confidence_map[prediction >= 0.10] = 4   # High confidence fire (>0.10)
+    confidence_map[(prediction >= 0.05) & (prediction < 0.10)] = 3  # Medium confidence fire (0.05-0.10)
+    confidence_map[(prediction >= 0.02) & (prediction < 0.05)] = 2   # Low confidence fire (0.02-0.05)  
+    confidence_map[prediction < 0.02] = 1    # No fire (<0.02)
     
     # Save confidence map
     confidence_path = os.path.join(output_dir, 'fire_confidence_zones.tif')
@@ -323,11 +332,18 @@ def predict_with_confidence_zones(results):
         4: "High Confidence Fire"
     }
     
-    print(f"\n🎯 Confidence Zone Statistics:")
+    print(f"\n🎯 Confidence Zone Statistics (Optimized Thresholds):")
     for zone_id, zone_name in zones.items():
         zone_pixels = np.sum(confidence_map == zone_id)
         zone_percentage = (zone_pixels / confidence_map.size) * 100
         print(f"  {zone_name}: {zone_pixels:,} pixels ({zone_percentage:.2f}%)")
+    
+    # Additional detailed breakdown
+    print(f"\n📈 Threshold Breakdown:")
+    print(f"  - Pixels > 0.10 (High): {np.sum(prediction >= 0.10):,}")
+    print(f"  - Pixels 0.05-0.10 (Medium): {np.sum((prediction >= 0.05) & (prediction < 0.10)):,}")
+    print(f"  - Pixels 0.02-0.05 (Low): {np.sum((prediction >= 0.02) & (prediction < 0.05)):,}")
+    print(f"  - Pixels < 0.02 (None): {np.sum(prediction < 0.02):,}")
     
     return confidence_map
 
@@ -354,7 +370,9 @@ def predict_fire_nextday(model_path, input_tif_path, output_dir,
     )
     
     # Also create confidence zones
-    predict_with_confidence_zones(results)
+    predict_with_confidence_zones(
+        input_tif_path, output_dir, results
+    )
     
     print(f"\n🎉 PREDICTION COMPLETE!")
     print(f"📁 Output files saved to: {output_dir}")
