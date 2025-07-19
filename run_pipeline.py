@@ -60,7 +60,7 @@ def run_prediction(model_path, input_tif, output_path):
         os.makedirs(output_dir, exist_ok=True)
         
         # Use predict_fire_nextday for comprehensive prediction (includes confidence zones)
-        prediction = predict_fire_nextday(
+        predict_fire_nextday(
             model_path=model_path,
             input_tif_path=input_tif,
             output_dir=output_dir,

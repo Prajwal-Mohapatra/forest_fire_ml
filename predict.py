@@ -276,8 +276,7 @@ def predict_fire_probability(model_path, input_tif_path, output_dir,
         'metadata': metadata
     }
 
-def predict_with_confidence_zones(model_path, input_tif_path, output_dir, 
-                                patch_size=256, overlap=64):
+def predict_with_confidence_zones(results):
     """
     Predict fire probability with confidence zones
     
@@ -289,12 +288,6 @@ def predict_with_confidence_zones(model_path, input_tif_path, output_dir,
     """
     
     # Get probability map
-    results = predict_fire_probability(
-        model_path, input_tif_path, output_dir,
-        patch_size=patch_size, overlap=overlap,
-        save_probability=True, save_binary=False
-    )
-    
     prediction = results['probability_map']
     
     # Create confidence zones
@@ -361,9 +354,7 @@ def predict_fire_nextday(model_path, input_tif_path, output_dir,
     )
     
     # Also create confidence zones
-    predict_with_confidence_zones(
-        model_path, input_tif_path, output_dir, patch_size, overlap
-    )
+    predict_with_confidence_zones(results)
     
     print(f"\n🎉 PREDICTION COMPLETE!")
     print(f"📁 Output files saved to: {output_dir}")
