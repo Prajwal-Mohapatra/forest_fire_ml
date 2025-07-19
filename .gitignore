@@ -48,6 +48,7 @@ outputs/*.bak/
 outputs/training_*
 outputs/checkpoints/
 outputs/temp_*
+outputs/final_model.h5
 
 # Keep directory structure but ignore large files
 outputs
