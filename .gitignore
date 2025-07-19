@@ -111,6 +111,8 @@ outputs/probability_map_*.tif
 predictions_*.tif
 predictions_*.tiff
 large_predictions/
+*success*/
+*success_*.zip
 
 # =============================================================================
 # LOGS & MONITORING
@@ -142,7 +144,6 @@ docs/
 # Test outputs
 test_outputs/
 test_results/
-big_success1/
 .pytest_cache/
 .coverage
 htmlcov/

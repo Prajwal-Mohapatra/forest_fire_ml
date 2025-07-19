@@ -20,15 +20,29 @@ class FireDatasetGenerator(Sequence):
         self.shuffle = shuffle
         self.fire_focus_ratio = fire_focus_ratio
         
-        # Setup augmentation pipeline
+        # Setup enhanced augmentation pipeline for fire detection
         self.augment_fn = None
         if augment:
             self.augment_fn = A.Compose([
+                # Geometric augmentations
                 A.HorizontalFlip(p=0.5),
                 A.VerticalFlip(p=0.5),
                 A.RandomRotate90(p=0.5),
-                A.RandomBrightnessContrast(p=0.3),
-                A.GaussNoise(p=0.2),
+                A.ShiftScaleRotate(shift_limit=0.1, scale_limit=0.1, rotate_limit=15, p=0.3),
+                
+                # Photometric augmentations (fire-aware)
+                A.RandomBrightnessContrast(brightness_limit=0.2, contrast_limit=0.2, p=0.4),
+                A.RandomGamma(gamma_limit=(80, 120), p=0.3),  # Fire thermal variations
+                A.HueSaturationValue(hue_shift_limit=10, sat_shift_limit=15, val_shift_limit=10, p=0.3),
+                
+                # Noise and blur (simulate atmospheric conditions)
+                A.GaussNoise(var_limit=(10, 50), p=0.2),
+                A.GaussianBlur(blur_limit=(1, 3), p=0.1),
+                A.MotionBlur(blur_limit=3, p=0.1),
+                
+                # Weather simulation augmentations
+                A.RandomFog(fog_coef_lower=0.1, fog_coef_upper=0.3, alpha_coef=0.08, p=0.1),  # Smoke
+                A.RandomShadow(shadow_roi=(0, 0.3, 1, 1), num_shadows_lower=1, num_shadows_upper=2, p=0.1),
             ])
         
         # Pre-compute patch coordinates for each day

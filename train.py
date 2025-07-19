@@ -84,17 +84,25 @@ def create_datasets(base_dir):
     return train_files, val_files, test_files
 
 def main():
-    # Configuration - Enhanced for 50-epoch training with regularization
+    # Configuration - Optimized for 10-epoch debugging with aggressive fire detection
     CONFIG = {
         'patch_size': 256,
         'batch_size': 8,
         'n_patches_per_img': 25,      # Reduced from 30 for more diversity
-        'epochs': 10,                 # Increased from 5
-        'learning_rate': 5e-5,        # Reduced from 1e-4
-        'fire_focus_ratio': 0.7,      # Reduced from 0.8 for more diversity
-        'focal_gamma': 1.0,           # Reduced from 2.0
-        'focal_alpha': 0.4,           # Increased from 0.25
-        'dropout_rate': 0.3,          # Added dropout for regularization
+        'epochs': 10,                 # Debug epochs
+        'learning_rate': 1e-4,        # Increased from 5e-5 for faster 10-epoch learning
+        'fire_focus_ratio': 0.8,      # Increased from 0.7 - more fire examples
+        'focal_gamma': 2.0,           # Increased from 1.0 - hard example focus
+        'focal_alpha': 0.6,           # Increased from 0.4 - fire class bias
+        'dropout_rate': 0.1,          # Reduced from 0.3 for 10-epoch optimization
+        # Class weights for extreme imbalance - GAME CHANGER
+        'use_class_weights': True,
+        'fire_weight': 100.0,         # Extreme weight for fire class
+        'no_fire_weight': 1.0,
+        # 10-Epoch Specific Callback Configuration
+        'patience': 5,                # Half of epochs (not 15)
+        'factor': 0.5,                # Aggressive LR reduction (not 0.2)
+        'min_lr': 1e-7,               # Appropriate minimum
     }
     
     print("🔥 Starting Fire Prediction Model Training...")
@@ -159,20 +167,29 @@ def main():
         ),
         EarlyStopping(
             monitor='val_loss',
-            patience=15,              # Increased patience for 50 epochs
+            patience=CONFIG['patience'],  # 5 epochs for 10-epoch training
             restore_best_weights=True,
             verbose=1
         ),
         ReduceLROnPlateau(
             monitor='val_loss',
-            factor=0.2,               # More aggressive reduction
-            patience=7,               # Increased patience
-            min_lr=1e-7,
+            factor=CONFIG['factor'],      # 0.5 for aggressive reduction
+            patience=3,                   # Quick response for 10-epoch training
+            min_lr=CONFIG['min_lr'],      # 1e-7
             verbose=1
         ),
         CSVLogger(f'{output_dir}/logs/training_log.csv'),
         TrainingMonitor()
     ]
+    
+    # Prepare class weights for extreme imbalance
+    class_weights = None
+    if CONFIG['use_class_weights']:
+        class_weights = {
+            0: CONFIG['no_fire_weight'],   # No-fire class (majority)
+            1: CONFIG['fire_weight']       # Fire class (minority) - heavily weighted
+        }
+        print(f"Using class weights: {class_weights}")
     
     # Train model
     print("Starting training...")
@@ -181,6 +198,7 @@ def main():
         validation_data=val_gen,
         epochs=CONFIG['epochs'],
         callbacks=callbacks,
+        class_weight=class_weights,
         verbose=1
     )
     
