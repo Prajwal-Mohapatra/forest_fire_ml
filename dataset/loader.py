@@ -28,20 +28,13 @@ class FireDatasetGenerator(Sequence):
                 A.HorizontalFlip(p=0.5),
                 A.VerticalFlip(p=0.5),
                 A.RandomRotate90(p=0.5),
-                A.Affine(shear=(-10, 10), rotate=(-15, 15), scale=(0.9, 1.1), translate_percent=(-0.1, 0.1), p=0.3),
                 
-                # Photometric augmentations (multi-channel compatible)
-                A.RandomBrightnessContrast(brightness_limit=0.2, contrast_limit=0.2, p=0.4),
-                A.RandomGamma(gamma_limit=(80, 120), p=0.3),  # Fire thermal variations
-                # Removed: HueSaturationValue (only works with 1 or 3 channels)
+                # Simple photometric augmentations (fixed parameters)
+                A.RandomBrightnessContrast(brightness_limit=(-0.1, 0.1), contrast_limit=(-0.1, 0.1), p=0.4),  # Fixed: tuple format
+                A.RandomGamma(gamma_limit=(0.8, 1.2), p=0.3),  # Fire thermal variations
                 
-                # Noise and blur (work with any number of channels)
-                A.GaussNoise(var_limit=50, p=0.2),
-                A.GaussianBlur(blur_limit=(1, 3), p=0.1),
-                A.MotionBlur(blur_limit=3, p=0.1),
-                
-                # Weather simulation (removed - RGB only)
-                # Removed: RandomFog, RandomShadow (designed for RGB images)
+                # Simple noise (using correct parameter)
+                A.GaussNoise(noise_scale_factor=0.1, p=0.2),  # Fixed: noise_scale_factor instead of var_limit
             ])
         
         # Pre-compute patch coordinates for each day

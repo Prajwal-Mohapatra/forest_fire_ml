@@ -95,14 +95,17 @@ def main():
         'focal_gamma': 2.0,           # Increased from 1.0 - hard example focus
         'focal_alpha': 0.6,           # Increased from 0.4 - fire class bias
         'dropout_rate': 0.1,          # Reduced from 0.3 for 10-epoch optimization
-        # Class weights for extreme imbalance - GAME CHANGER
+        
         'use_class_weights': True,
         'fire_weight': 100.0,         # Extreme weight for fire class
         'no_fire_weight': 1.0,
+
         # 10-Epoch Specific Callback Configuration
         'patience': 5,                # Half of epochs (not 15)
         'factor': 0.5,                # Aggressive LR reduction (not 0.2)
         'min_lr': 1e-7,               # Appropriate minimum
+
+        'debug_mode': False,          # Set to True to disable all augmentation
     }
     
     print("🔥 Starting Fire Prediction Model Training...")
@@ -127,7 +130,7 @@ def main():
         batch_size=CONFIG['batch_size'],
         n_patches_per_img=CONFIG['n_patches_per_img'],
         fire_focus_ratio=CONFIG['fire_focus_ratio'],
-        augment=True
+        augment=not CONFIG['debug_mode']  # Disable augmentation in debug mode
     )
     
     val_gen = FireDatasetGenerator(
@@ -136,7 +139,7 @@ def main():
         batch_size=CONFIG['batch_size'],
         n_patches_per_img=CONFIG['n_patches_per_img'] // 2,
         fire_focus_ratio=CONFIG['fire_focus_ratio'],
-        augment=False
+        augment=False  # Never augment validation data
     )
     
     # Build model with dropout
