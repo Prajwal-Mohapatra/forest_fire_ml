@@ -97,7 +97,7 @@ def focal_loss(gamma=2.0, alpha=0.25):
 #     return model
 
 custom_objects = {
-        "focal_loss_fixed": focal_loss(gamma=2.0, alpha=0.25),        
+        "focal_loss_fixed": focal_loss(gamma=1.0, alpha=0.4),        
         'iou_score': iou_score,
         'dice_coef': dice_coef,
     }
