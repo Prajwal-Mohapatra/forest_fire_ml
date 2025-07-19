@@ -128,7 +128,7 @@ validation_*.csv
 wandb/
 mlruns/
 .mlflow/
-knowledge/
+docs/
 
 # =============================================================================
 # JUPYTER NOTEBOOKS
@@ -142,6 +142,7 @@ knowledge/
 # Test outputs
 test_outputs/
 test_results/
+big_success1/
 .pytest_cache/
 .coverage
 htmlcov/
