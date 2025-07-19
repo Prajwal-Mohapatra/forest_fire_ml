@@ -31,7 +31,7 @@ class FireDatasetGenerator(Sequence):
                 
                 # Simple photometric augmentations (fixed parameters)
                 A.RandomBrightnessContrast(brightness_limit=(-0.1, 0.1), contrast_limit=(-0.1, 0.1), p=0.4),  # Fixed: tuple format
-                A.RandomGamma(gamma_limit=(0.8, 1.2), p=0.3),  # Fire thermal variations
+                A.RandomGamma(gamma_limit=(1.0, 1.3), p=0.3),  # Fixed: all values must be >= 1.0
                 
                 # Simple noise (using correct parameter)
                 A.GaussNoise(noise_scale_factor=0.1, p=0.2),  # Fixed: noise_scale_factor instead of var_limit
