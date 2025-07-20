@@ -68,10 +68,25 @@ def create_datasets(base_dir):
     # val_files = [f for f in all_files if '2016_05_' in f and int(f.split('_')[-1].split('.')[0]) <= 15]
     # test_files = [f for f in all_files if '2016_05_' in f and int(f.split('_')[-1].split('.')[0]) > 15]
 
-    # New Temporal split: Early April (1-20) for training, late April for validation, full May for testing
-    train_files = [f for f in all_files if '2016_04_' in f and int(f.split('_')[-1].split('.')[0]) <= 20]
-    val_files = [f for f in all_files if '2016_04_' in f and int(f.split('_')[-1].split('.')[0]) > 20]
-    test_files = [f for f in all_files if '2016_05_' in f]
+    ## New Temporal split: Early April (1-20) for training, late April for validation, full May for testing
+    #train_files = [f for f in all_files if '2016_04_' in f and int(f.split('_')[-1].split('.')[0]) <= 20]
+    #val_files = [f for f in all_files if '2016_04_' in f and int(f.split('_')[-1].split('.')[0]) > 20]
+    #test_files = [f for f in all_files if '2016_05_' in f]
+
+    ## Updated Temporal spli for trial purpose
+    # Training: April (1-27) + May (1-3)
+    train_files = [f for f in all_files if
+                   ('2016_04_' in f and int(f.split('_')[-1].split('.')[0]) <= 27) or
+                   ('2016_05_' in f and int(f.split('_')[-1].split('.')[0]) <= 3)]
+    
+    # Validation: April(28-30) + May (4-20)
+    val_files = [f for f in all_files if
+                 ('2016_04_' in f and 28 <= int(f.split('_')[-1].split('.')[0]) <= 30) or
+                 ('2016_05_' in f and 4 <= int(f.split('_')[-1].split('.')[0]) <= 20)]
+    
+    # Test: May(21-28)
+    test_files = [f for f in all_files if
+                  '2016_05_' in f and 21 <= int(f.split('_')[-1].split('.')[0]) <= 28]
 
     # # Random split: 80% training + validation, 20% testing; 80% -> 80% training & 20% validation
     # train_val_files, test_files = train_test_split(all_files, test_size=0.2, random_state=42)
