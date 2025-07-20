@@ -18,19 +18,19 @@ import keras.backend as K
 
 #Specifying test files
 
-def create_datasets(base_dir):
-    """Create train/val/test splits with temporal awareness"""
-    all_files = sorted(glob.glob(os.path.join(base_dir, 'stack_2016_*.tif')))
+#def create_datasets(base_dir):
+    #"""Create train/val/test splits with temporal awareness"""
+    #all_files = sorted(glob.glob(os.path.join(base_dir, 'stack_2016_*.tif')))
     
-    if not all_files:
-        raise ValueError(f"No files found in {base_dir}")
+    #if not all_files:
+      #  raise ValueError(f"No files found in {base_dir}")
     
-    print(f"Found {len(all_files)} files")
+    #print(f"Found {len(all_files)} files")
 
     # Test: May(21-28)
-    test_files = [f for f in all_files if
-                  '2016_05_' in f and 21 <= int(f.split('_')[-1].split('.')[0]) <= 28]
-    return test_files
+    #test_files = [f for f in all_files if
+    #              '2016_05_' in f and 21 <= int(f.split('_')[-1].split('.')[0]) <= 28]
+    #return test_files
 
 
 @keras.saving.register_keras_serializable()
@@ -281,8 +281,8 @@ def calculate_additional_metrics(y_true, y_pred, threshold=0.5):
 if __name__ == "__main__":
     # Example usage
     model_path = "/kaggle/working/forest_fire_ml/outputs/final_model.keras"
-    base_dir = "/kaggle/input/stacked-fire-probability-prediction-dataset/dataset_stacked"
-    create_datasets(base_dir)
+    #base_dir = "/kaggle/input/stacked-fire-probability-prediction-dataset/dataset_stacked"
+    #create_datasets(base_dir)
     test_files = []  # Add your test files here
     
     if test_files:
