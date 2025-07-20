@@ -279,6 +279,8 @@ def calculate_additional_metrics(y_true, y_pred, threshold=0.5):
 if __name__ == "__main__":
     # Example usage
     model_path = "/kaggle/working/forest_fire_ml/outputs/final_model.keras"
+    base_dir = "/kaggle/input/stacked-fire-probability-prediction-dataset/dataset_stacked"
+    create_datasets(base_dir)
     test_files = []  # Add your test files here
     
     if test_files:
