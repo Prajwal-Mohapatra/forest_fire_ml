@@ -1,5 +1,3 @@
-# 4. model/resunet_a.py
-# ====================
 import tensorflow as tf
 from keras.layers import *
 from keras.models import Model

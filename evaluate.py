@@ -1,6 +1,3 @@
-# ====================
-# 7. evaluate.py (FIXED)
-# ====================
 import os
 import numpy as np
 import matplotlib.pyplot as plt
@@ -8,7 +5,6 @@ import tensorflow as tf
 import keras
 from dataset.loader import FireDatasetGenerator
 # from utils.metrics import iou_score, dice_coef, focal_loss
-import seaborn as sns
 
 import tensorflow as tf
 import keras
@@ -46,56 +42,7 @@ def focal_loss(gamma=2.0, alpha=0.25):
         return tf.reduce_mean(focal_loss)
     return focal_loss_fixed
 
-
-# def load_model_safe(model_path):
-#     """Safely load model with proper custom objects handling"""
-    
-#     # Define all possible custom objects the model might need
-#     custom_objects = {
-#         "focal_loss_fixed": focal_loss(gamma=2.0, alpha=0.25),        
-#         'iou_score': iou_score,
-#         'dice_coef': dice_coef,
-#     }
-    
-#     print(f"🔄 Attempting to load model from: {model_path}")
-    
-#     # Try different loading strategies
-#     strategies = [
-#         # Strategy 1: Load with focal_loss_fixed only (we know this works)
-#         {
-#             'focal_loss': focal_loss(),
-#         },
-        
-#         # Strategy 2: Load without compilation (fallback)
-#         None,
-        
-#         # Strategy 3: Load with all custom objects
-#         custom_objects,
-#     ]
-    
-#     model = None
-#     for i, strategy in enumerate(strategies, 1):
-#         try:
-#             if strategy is None:
-#                 # Load without compilation
-#                 model = keras.models.load_model(model_path, compile=False)
-#                 print(f"✅ Strategy {i}: Loaded without compilation")
-#                 break
-#             else:
-#                 # Load with custom objects
-#                 model = keras.models.load_model(model_path, custom_objects=strategy)
-#                 print(f"✅ Strategy {i}: Loaded with custom objects")
-#                 break
-                
-#         except Exception as e:
-#             print(f"❌ Strategy {i} failed: {str(e)}")
-#             continue
-    
-#     if model is None:
-#         raise Exception("Failed to load model with any strategy")
-    
-#     return model
-
+# Custom objects for loading model
 custom_objects = {
         "focal_loss_fixed": focal_loss(gamma=1.0, alpha=0.4),        
         'iou_score': iou_score,
@@ -221,7 +168,7 @@ def visualize_predictions(y_true, y_pred, output_dir, n_samples=8):
     print(f"✅ Visualization saved to {output_path}")
     plt.show()
 
-def calculate_additional_metrics(y_true, y_pred, threshold=0.5):
+def calculate_additional_metrics(y_true, y_pred, threshold=0.05):
     """Calculate additional evaluation metrics"""
     
     # Convert to binary predictions

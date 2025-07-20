@@ -1,6 +1,3 @@
-# ====================
-# 8. predict.py (ENHANCED) - Binary Fire/No-Fire Output
-# ====================
 import os
 import numpy as np
 import rasterio
@@ -10,54 +7,6 @@ import os
 
 from utils.metrics import focal_loss, iou_score, dice_coef
 from utils.preprocess import normalize_patch
-
-# def load_model_safe(model_path):
-#     """Safely load model with proper custom objects handling"""
-    
-#     print(f"🔄 Attempting to load model from: {model_path}")
-    
-#     # Try different loading strategies
-#     strategies = [
-#         # Strategy 1: Load with focal_loss_fixed only (we know this works)
-#         {
-#             'focal_loss_fixed': focal_loss(),
-#         },
-        
-#         # Strategy 2: Load without compilation (fallback)
-#         None,
-        
-#         # Strategy 3: Load with all possible custom objects
-#         {
-#             'focal_loss_fixed': focal_loss(),
-#             'iou_score': iou_score,
-#             'dice_coef': dice_coef,
-#             'focal_loss': focal_loss,
-#         },
-#     ]
-    
-#     model = None
-#     for i, strategy in enumerate(strategies, 1):
-#         try:
-#             if strategy is None:
-#                 # Load without compilation
-#                 model = keras.models.load_model(model_path, compile=False)
-#                 print(f"✅ Strategy {i}: Loaded without compilation")
-#                 break
-#             else:
-#                 # Load with custom objects
-#                 model = keras.models.load_model(model_path, custom_objects=strategy)
-#                 print(f"✅ Strategy {i}: Loaded with custom objects")
-#                 break
-                
-#         except Exception as e:
-#             print(f"❌ Strategy {i} failed: {str(e)}")
-#             continue
-    
-#     if model is None:
-#         raise Exception("Failed to load model with any strategy")
-    
-#     return model
-
 
 import tensorflow as tf
 import keras
@@ -121,7 +70,7 @@ def predict_fire_probability(model_path, input_tif_path, output_dir,
         dict: Contains probability map, binary map, and metadata
     """
     
-    # Load model safely
+    # Load model
     model = keras.models.load_model(model_path, custom_objects=custom_objects)
     
     # Read input image

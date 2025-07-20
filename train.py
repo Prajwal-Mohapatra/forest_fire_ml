@@ -94,18 +94,14 @@ def main():
         'fire_focus_ratio': 0.8,      # Increased from 0.7 - more fire examples
         'focal_gamma': 2.0,           # Increased from 1.0 - hard example focus
         'focal_alpha': 0.6,           # Increased from 0.4 - fire class bias
-        'dropout_rate': 0.1,          # Reduced from 0.3 for 10-epoch optimization
-        
-        'use_class_weights': True,
-        'fire_weight': 100.0,         # Extreme weight for fire class
-        'no_fire_weight': 1.0,
+        'dropout_rate': 0.1,          # Reduced from 0.3 for 10-epoch optimization 
 
         # 10-Epoch Specific Callback Configuration
         'patience': 5,                # Half of epochs (not 15)
         'factor': 0.5,                # Aggressive LR reduction (not 0.2)
         'min_lr': 1e-7,               # Appropriate minimum
 
-        'debug_mode': True,          # Set to True to disable all augmentation
+        'debug_mode': False,          # Set to True to disable all augmentation
     }
     
     print("🔥 Starting Fire Prediction Model Training...")
@@ -185,15 +181,6 @@ def main():
         TrainingMonitor()
     ]
     
-    # Prepare class weights for extreme imbalance
-    class_weights = None
-    if CONFIG['use_class_weights']:
-        class_weights = {
-            0: CONFIG['no_fire_weight'],   # No-fire class (majority)
-            1: CONFIG['fire_weight']       # Fire class (minority) - heavily weighted
-        }
-        print(f"Using class weights: {class_weights}")
-    
     # Train model
     print("Starting training...")
     history = model.fit(
@@ -201,7 +188,6 @@ def main():
         validation_data=val_gen,
         epochs=CONFIG['epochs'],
         callbacks=callbacks,
-        # class_weight=class_weights,
         verbose=1
     )
     
