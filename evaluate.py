@@ -30,6 +30,7 @@ def create_datasets(base_dir):
     # Test: May(21-28)
     test_files = [f for f in all_files if
                   '2016_05_' in f and 21 <= int(f.split('_')[-1].split('.')[0]) <= 28]
+    return test_files
 
 
 @keras.saving.register_keras_serializable()
