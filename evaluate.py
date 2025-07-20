@@ -14,6 +14,23 @@ import tensorflow as tf
 import keras
 import keras.backend as K
 
+
+#Specifying test files
+
+def create_datasets(base_dir):
+    """Create train/val/test splits with temporal awareness"""
+    all_files = sorted(glob.glob(os.path.join(base_dir, 'stack_2016_*.tif')))
+    
+    if not all_files:
+        raise ValueError(f"No files found in {base_dir}")
+    
+    print(f"Found {len(all_files)} files")
+
+    # Test: May(21-28)
+    test_files = [f for f in all_files if
+                  '2016_05_' in f and 21 <= int(f.split('_')[-1].split('.')[0]) <= 28]
+
+
 @keras.saving.register_keras_serializable()
 def iou_score(y_true, y_pred, smooth=1e-6):
     """Intersection over Union metric for binary segmentation"""
