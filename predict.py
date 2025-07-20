@@ -13,27 +13,45 @@ import keras
 import keras.backend as K
 
 @keras.saving.register_keras_serializable()
-def iou_score(y_true, y_pred, smooth=1e-6):
-    """Intersection over Union metric for binary segmentation"""
+def iou_score(y_true, y_pred, threshold=0.05, smooth=1e-6):
+    """Intersection over Union metric for binary segmentation with configurable threshold"""
     y_true = tf.cast(y_true, tf.float32)
-    y_pred = tf.cast(y_pred > 0.5, tf.float32)
+    y_pred = tf.cast(y_pred > threshold, tf.float32)
     intersection = tf.reduce_sum(y_true * y_pred)
     union = tf.reduce_sum(y_true) + tf.reduce_sum(y_pred) - intersection
     return (intersection + smooth) / (union + smooth)
 
 @keras.saving.register_keras_serializable()
-def dice_coef(y_true, y_pred, smooth=1e-6):
-    """Dice coefficient for binary segmentation"""
+def dice_coef(y_true, y_pred, threshold=0.05, smooth=1e-6):
+    """Dice coefficient for binary segmentation with configurable threshold"""
     y_true = tf.cast(y_true, tf.float32)
-    y_pred = tf.cast(y_pred > 0.5, tf.float32)
+    y_pred = tf.cast(y_pred > threshold, tf.float32)
     y_true_f = tf.reshape(y_true, [-1])
     y_pred_f = tf.reshape(y_pred, [-1])
     intersection = tf.reduce_sum(y_true_f * y_pred_f)
     return (2. * intersection + smooth) / (tf.reduce_sum(y_true_f) + tf.reduce_sum(y_pred_f) + smooth)
 
 @keras.saving.register_keras_serializable()
-def focal_loss(gamma=2.0, alpha=0.25):
-    """Focal loss for handling class imbalance"""
+def fire_recall(y_true, y_pred, threshold=0.05, smooth=1e-6):
+    """Fire-specific recall metric"""
+    y_true = tf.cast(y_true, tf.float32)
+    y_pred = tf.cast(y_pred > threshold, tf.float32)
+    true_positives = tf.reduce_sum(y_true * y_pred)
+    possible_positives = tf.reduce_sum(y_true)
+    return (true_positives + smooth) / (possible_positives + smooth)
+
+@keras.saving.register_keras_serializable()
+def fire_precision(y_true, y_pred, threshold=0.05, smooth=1e-6):
+    """Fire-specific precision metric"""
+    y_true = tf.cast(y_true, tf.float32)
+    y_pred = tf.cast(y_pred > threshold, tf.float32)
+    true_positives = tf.reduce_sum(y_true * y_pred)
+    predicted_positives = tf.reduce_sum(y_pred)
+    return (true_positives + smooth) / (predicted_positives + smooth)
+
+@keras.saving.register_keras_serializable()
+def focal_loss(gamma=2.0, alpha=0.75):
+    """Focal loss for handling class imbalance - updated parameters"""
     def focal_loss_fixed(y_true, y_pred):
         epsilon = keras.backend.epsilon()
         y_pred = tf.clip_by_value(y_pred, epsilon, 1. - epsilon)
@@ -45,9 +63,11 @@ def focal_loss(gamma=2.0, alpha=0.25):
     return focal_loss_fixed
 
 custom_objects = {
-        "focal_loss_fixed": focal_loss(gamma=2.0, alpha=0.25),        
+        "focal_loss_fixed": focal_loss(gamma=2.0, alpha=0.75),  # Updated parameters      
         'iou_score': iou_score,
         'dice_coef': dice_coef,
+        'fire_recall': fire_recall,
+        'fire_precision': fire_precision,
     }
 
 def predict_fire_probability(model_path, input_tif_path, output_dir, 
@@ -87,12 +107,12 @@ def predict_fire_probability(model_path, input_tif_path, output_dir,
         print(f"❌ Failed to read input image: {str(e)}")
         raise e
     
-    # Prepare data
+    # Prepare data with 12-channel output after LULC encoding
     img_data = np.moveaxis(img_data, 0, -1)  # (H, W, C)
-    features = normalize_patch(img_data[:, :, :9])  # First 9 bands
+    features = normalize_patch(img_data[:, :, :9])  # First 9 bands -> becomes 12 channels
     
     h, w = features.shape[:2]
-    print(f"📊 Processing image of size: {h}x{w}")
+    print(f"📊 Processing image of size: {h}x{w}, channels: {features.shape[2]}")
     
     # Initialize prediction array
     prediction = np.zeros((h, w), dtype=np.float32)

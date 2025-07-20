@@ -66,13 +66,13 @@ def atrous_spatial_pyramid_pooling(inputs, filters=256):
     
     return output
 
-def build_resunet_a(input_shape=(256, 256, 9), num_classes=1, dropout_rate=0.0):
+def build_resunet_a(input_shape=(256, 256, 12), num_classes=1, dropout_rate=0.2):
     """
     Build ResUNet-A architecture for fire prediction
     Args:
-        input_shape: Input tensor shape
+        input_shape: Input tensor shape (updated to 12 channels for LULC encoding)
         num_classes: Number of output classes
-        dropout_rate: Dropout rate for regularization (0.0 = no dropout)
+        dropout_rate: Dropout rate for regularization (increased from 0.1 to 0.2)
     """
     inputs = Input(input_shape)
     
