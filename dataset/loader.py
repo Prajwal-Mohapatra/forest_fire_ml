@@ -6,7 +6,7 @@ import rasterio
 from keras.utils import Sequence
 from datetime import datetime, timedelta
 import albumentations as A
-from utils.preprocess import normalize_patch, get_fire_focused_coordinates, create_uttarakhand_mask_from_coords, apply_geographic_masking_to_patch
+from utils.preprocess import normalize_patch, get_fire_focused_coordinates, create_uttarakhand_mask_from_shapefile, apply_geographic_masking_to_patch
 
 class FireDatasetGenerator(Sequence):
     def __init__(self, tif_paths, patch_size=256, batch_size=8, n_patches_per_img=50,
@@ -64,9 +64,7 @@ class FireDatasetGenerator(Sequence):
                     
                     # Apply Uttarakhand masking to the full image fire mask
                     try:
-                        uttarakhand_mask_full = create_uttarakhand_mask_from_coords(
-                            src.height, src.width, src.transform
-                        )
+                        uttarakhand_mask_full = create_uttarakhand_mask_from_shapefile(src)
                         fire_mask = fire_mask_raw * uttarakhand_mask_full  # Apply geographic masking
                         
                         # Log masking effectiveness
@@ -167,19 +165,21 @@ class FireDatasetGenerator(Sequence):
                         boundless=True, fill_value=0
                     ).astype(np.float32)
                 
-                    # Create Uttarakhand mask for this patch
+                    # Create Uttarakhand mask for this patch - use shapefile-based masking
                     try:
-                        uttarakhand_mask_patch = create_uttarakhand_mask_from_coords(
-                            self.patch_size, self.patch_size, src.transform
-                        )
-                        # Adjust mask coordinates for the patch window
-                        patch_transform = rasterio.windows.transform(
-                            rasterio.windows.Window(x, y, self.patch_size, self.patch_size),
-                            src.transform
-                        )
-                        uttarakhand_mask_patch = create_uttarakhand_mask_from_coords(
-                            self.patch_size, self.patch_size, patch_transform
-                        )
+                        # For patch-level masking, we need to create a subset of the full mask
+                        uttarakhand_mask_full = create_uttarakhand_mask_from_shapefile(src)
+                        # Extract patch-sized mask from full mask
+                        uttarakhand_mask_patch = uttarakhand_mask_full[y:y+self.patch_size, x:x+self.patch_size]
+                        
+                        # Ensure patch mask has correct shape
+                        if uttarakhand_mask_patch.shape != (self.patch_size, self.patch_size):
+                            # Pad if needed (for boundary patches)
+                            patch_mask_padded = np.ones((self.patch_size, self.patch_size), dtype=bool)
+                            actual_h, actual_w = uttarakhand_mask_patch.shape
+                            patch_mask_padded[:actual_h, :actual_w] = uttarakhand_mask_patch
+                            uttarakhand_mask_patch = patch_mask_padded
+                            
                     except Exception as mask_error:
                         print(f"⚠️ Failed to create Uttarakhand mask for patch: {mask_error}")
                         uttarakhand_mask_patch = np.ones((self.patch_size, self.patch_size), dtype=bool)

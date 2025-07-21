@@ -4,7 +4,7 @@ Dataset Validation Script
 =========================
 Comprehensive validation script to check for data stacking issues, 
 date mismatches, and dataset integrity as mentioned in the Grok analysis.
-Enhanced with Uttarakhand geographic boundary validation.
+Enhanced with Uttarakhand shapefile-based geographic boundary validation.
 """
 
 import os
@@ -16,54 +16,37 @@ from datetime import datetime, timedelta
 from collections import defaultdict
 import matplotlib.pyplot as plt
 from pathlib import Path
+from utils.preprocess import create_uttarakhand_mask_from_shapefile
 
 def create_uttarakhand_mask(src):
     """
-    Create a mask for Uttarakhand state boundaries using approximate geographic coordinates.
-    Uttarakhand approximate boundaries:
-    - Latitude: 28.43° N to 31.28° N
-    - Longitude: 77.34° E to 81.03° E
+    Create a mask for Uttarakhand state boundaries using shapefile for precise boundary validation.
+    This replaces coordinate-based masking with accurate polygon-based masking.
     """
     try:
-        # Get the transform and bounds
-        transform = src.transform
-        height, width = src.height, src.width
+        # Use the shapefile-based function from preprocess
+        uttarakhand_mask = create_uttarakhand_mask_from_shapefile(src)
         
-        # Create coordinate grids
-        cols, rows = np.meshgrid(np.arange(width), np.arange(height))
-        xs, ys = rasterio.transform.xy(transform, rows, cols)
-        lons = np.array(xs)
-        lats = np.array(ys)
-        
-        # Define Uttarakhand boundaries (approximate)
+        # Return mask and dummy bounds for compatibility
         uttarakhand_bounds = {
-            'lat_min': 28.43,  # Southern boundary
-            'lat_max': 31.28,  # Northern boundary  
-            'lon_min': 77.34,  # Western boundary
-            'lon_max': 81.03   # Eastern boundary
+            'method': 'shapefile',
+            'shapefile': '/home/swayam/projects/forest_fire_spread/forest_fire_ml/utils/UK_BOUNDS/Uttarakhand_Boundary.shp'
         }
-        
-        # Create mask - True for pixels within Uttarakhand
-        uttarakhand_mask = (
-            (lats >= uttarakhand_bounds['lat_min']) &
-            (lats <= uttarakhand_bounds['lat_max']) &
-            (lons >= uttarakhand_bounds['lon_min']) &
-            (lons <= uttarakhand_bounds['lon_max'])
-        )
         
         return uttarakhand_mask, uttarakhand_bounds
         
     except Exception as e:
-        print(f"⚠️ Could not create Uttarakhand mask: {e}")
+        print(f"⚠️ Could not create Uttarakhand mask from shapefile: {e}")
+        print("   Falling back to full image (no masking)")
         # Return an all-True mask as fallback
         return np.ones((src.height, src.width), dtype=bool), None
 
 def apply_geographic_masking(fire_mask, uttarakhand_mask):
     """
-    Apply geographic masking to focus only on Uttarakhand region
+    Apply geographic masking to focus only on Uttarakhand region using shapefile boundaries
     """
     if uttarakhand_mask is not None:
-        # Mask out fire pixels outside Uttarakhand
+        # Mask out fire pixels outside Uttarakhand using precise shapefile boundaries
         masked_fire = fire_mask * uttarakhand_mask
         return masked_fire
     else:
@@ -149,7 +132,7 @@ def validate_dataset_integrity(base_dir, verbose=True):
     geographic_stats = {'total_pixels': 0, 'uttarakhand_pixels': 0, 'fire_pixels_raw': 0, 'fire_pixels_masked': 0}
     
     print(f"\n📊 ANALYZING FILE INTEGRITY AND FIRE STATISTICS...")
-    print("🗺️ Applying Uttarakhand geographic masking...")
+    print("🗺️ Applying Uttarakhand shapefile-based geographic masking...")
     
     for i, stack_file in enumerate(stack_files):
         try:
@@ -230,10 +213,10 @@ def validate_dataset_integrity(base_dir, verbose=True):
     total_coverage = geographic_stats['uttarakhand_pixels'] / geographic_stats['total_pixels'] * 100
     fire_ratio_improvement = (geographic_stats['fire_pixels_masked'] / geographic_stats['uttarakhand_pixels']) / (geographic_stats['fire_pixels_raw'] / geographic_stats['total_pixels']) if geographic_stats['fire_pixels_raw'] > 0 else 0
     
-    print(f"\n🗺️ GEOGRAPHIC MASKING RESULTS:")
+    print(f"\n🗺️ SHAPEFILE-BASED GEOGRAPHIC MASKING RESULTS:")
     print(f"   Uttarakhand coverage: {total_coverage:.2f}% of total area")
     print(f"   Raw fire pixels: {geographic_stats['fire_pixels_raw']:,}")
-    print(f"   Masked fire pixels: {geographic_stats['fire_pixels_masked']:,}")
+    print(f"   Shapefile-masked fire pixels: {geographic_stats['fire_pixels_masked']:,}")
     print(f"   Fire density improvement: {fire_ratio_improvement:.2f}x")
     
     # Find peak fire days
@@ -266,11 +249,11 @@ def validate_dataset_integrity(base_dir, verbose=True):
     if len(zero_fire_days) > len(fire_df) * 0.8:
         recommendations.append("Most days have no fire (after Uttarakhand masking) - check fire mask generation process")
     
-    # Add geographic masking recommendation
+    # Add shapefile-based geographic masking recommendation
     if fire_ratio_improvement > 1.5:
-        recommendations.append(f"Geographic masking improved fire density by {fire_ratio_improvement:.1f}x - integrate into preprocessing")
+        recommendations.append(f"Shapefile-based geographic masking improved fire density by {fire_ratio_improvement:.1f}x - integration successful")
     elif fire_ratio_improvement < 1.1:
-        recommendations.append("Geographic masking shows minimal improvement - verify Uttarakhand boundaries")
+        recommendations.append("Shapefile-based geographic masking shows minimal improvement - verify Uttarakhand shapefile boundaries")
     
     # Check temporal coverage
     date_range = fire_df['date'].max() - fire_df['date'].min()
@@ -308,10 +291,10 @@ def plot_fire_activity_timeline(fire_df, output_dir='outputs'):
     ax1.grid(True, alpha=0.3)
     ax1.tick_params(axis='x', rotation=45)
     
-    # Fire percentage over time - Uttarakhand Masked
-    ax2.plot(fire_df['date'], fire_df['fire_percentage_masked'], 'orange', linewidth=1, alpha=0.7, label='Uttarakhand Masked')
+    # Fire percentage over time - Shapefile Masked
+    ax2.plot(fire_df['date'], fire_df['fire_percentage_masked'], 'orange', linewidth=1, alpha=0.7, label='Shapefile Masked')
     ax2.scatter(fire_df['date'], fire_df['fire_percentage_masked'], c='orange', s=15, alpha=0.6)
-    ax2.set_title('Fire Activity Percentage Over Time (Uttarakhand Masked)', fontsize=14)
+    ax2.set_title('Fire Activity Percentage Over Time (Shapefile Masked)', fontsize=14)
     ax2.set_ylabel('Fire Percentage (%)', fontsize=12)
     ax2.grid(True, alpha=0.3)
     ax2.tick_params(axis='x', rotation=45)
@@ -325,10 +308,10 @@ def plot_fire_activity_timeline(fire_df, output_dir='outputs'):
     ax3.grid(True, alpha=0.3)
     ax3.tick_params(axis='x', rotation=45)
     
-    # Fire pixels over time - Uttarakhand Masked
+    # Fire pixels over time - Shapefile Masked
     ax4.plot(fire_df['date'], fire_df['fire_pixels_masked'], 'darkorange', linewidth=1, alpha=0.7)
     ax4.scatter(fire_df['date'], fire_df['fire_pixels_masked'], c='darkorange', s=15, alpha=0.6)
-    ax4.set_title('Fire Pixels Over Time (Uttarakhand Masked)', fontsize=14)
+    ax4.set_title('Fire Pixels Over Time (Shapefile Masked)', fontsize=14)
     ax4.set_ylabel('Fire Pixels', fontsize=12)
     ax4.set_xlabel('Date', fontsize=12)
     ax4.grid(True, alpha=0.3)

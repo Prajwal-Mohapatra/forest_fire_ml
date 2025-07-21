@@ -1,58 +1,147 @@
-# preprocess.py
-# ====================
 import numpy as np
 import cv2
 import rasterio
+from rasterio.mask import mask
+import os
 
-def create_uttarakhand_mask_from_coords(height, width, transform):
+# Optional import for fiona (shapefile support)
+try:
+    import fiona
+    HAS_FIONA = True
+except ImportError:
+    print("⚠️ Warning: fiona not installed. Shapefile clipping will be disabled.")
+    print("💡 Install with: pip install fiona")
+    HAS_FIONA = False
+
+# Path to Uttarakhand shapefile
+UTTARAKHAND_SHAPEFILE = '/home/swayam/projects/forest_fire_spread/forest_fire_ml/utils/UK_BOUNDS/Uttarakhand_Boundary.shp'
+
+def create_uttarakhand_mask_from_shapefile(src_raster, shapefile_path=UTTARAKHAND_SHAPEFILE):
     """
-    Create a mask for Uttarakhand state boundaries using transform information.
-    Uttarakhand approximate boundaries:
-    - Latitude: 28.43° N to 31.28° N
-    - Longitude: 77.34° E to 81.03° E
+    Create a mask for Uttarakhand state boundaries using shapefile for precise boundary clipping.
+    This replaces coordinate-based masking with accurate polygon-based masking.
+    
+    Args:
+        src_raster: rasterio dataset source
+        shapefile_path: Path to Uttarakhand boundary shapefile
+        
+    Returns:
+        numpy.ndarray: Boolean mask where True indicates pixels within Uttarakhand boundaries
     """
     try:
-        # Create coordinate grids
-        cols, rows = np.meshgrid(np.arange(width), np.arange(height))
-        xs, ys = rasterio.transform.xy(transform, rows, cols)
-        lons = np.array(xs)
-        lats = np.array(ys)
+        # Check if fiona is available
+        if not HAS_FIONA:
+            print("⚠️ fiona not available, falling back to full image")
+            return np.ones((src_raster.height, src_raster.width), dtype=bool)
         
-        # Define Uttarakhand boundaries (approximate)
-        uttarakhand_bounds = {
-            'lat_min': 28.43,  # Southern boundary
-            'lat_max': 31.28,  # Northern boundary  
-            'lon_min': 77.34,  # Western boundary
-            'lon_max': 81.03   # Eastern boundary
-        }
+        # Check if shapefile exists
+        if not os.path.exists(shapefile_path):
+            print(f"⚠️ Shapefile not found at {shapefile_path}, falling back to full image")
+            return np.ones((src_raster.height, src_raster.width), dtype=bool)
         
-        # Create mask - True for pixels within Uttarakhand
-        uttarakhand_mask = (
-            (lats >= uttarakhand_bounds['lat_min']) &
-            (lats <= uttarakhand_bounds['lat_max']) &
-            (lons >= uttarakhand_bounds['lon_min']) &
-            (lons <= uttarakhand_bounds['lon_max'])
-        )
+        # Load shapefile geometries
+        with fiona.open(shapefile_path, "r") as shapefile:
+            shapes = [feature["geometry"] for feature in shapefile]
         
-        return uttarakhand_mask.astype(bool)
+        # Create mask using rasterio.mask - this creates a boolean mask
+        try:
+            # Use rasterio's geometry masking to create boolean mask
+            mask_array = rasterio.features.geometry_mask(
+                shapes,
+                out_shape=(src_raster.height, src_raster.width),
+                transform=src_raster.transform,
+                invert=True  # invert=True makes True values inside the polygon
+            )
+            
+            return mask_array.astype(bool)
+            
+        except Exception as mask_error:
+            print(f"⚠️ Failed to create geometry mask: {mask_error}")
+            # Fallback: try using rasterio.mask.mask
+            try:
+                masked_array, masked_transform = mask(src_raster, shapes, crop=False, nodata=-9999)
+                # Create boolean mask where valid data exists
+                mask_array = masked_array[0] != -9999  # Assuming first band for mask creation
+                return mask_array.astype(bool)
+            except Exception as fallback_error:
+                print(f"⚠️ Fallback masking also failed: {fallback_error}")
+                return np.ones((src_raster.height, src_raster.width), dtype=bool)
         
     except Exception as e:
-        print(f"⚠️ Could not create Uttarakhand mask: {e}")
+        print(f"⚠️ Could not create Uttarakhand mask from shapefile: {e}")
         # Return an all-True mask as fallback
-        return np.ones((height, width), dtype=bool)
+        return np.ones((src_raster.height, src_raster.width), dtype=bool)
+
+def clip_raster_with_shapefile(src_raster, shapefile_path=UTTARAKHAND_SHAPEFILE):
+    """
+    Clip raster data using Uttarakhand shapefile boundaries.
+    This is more precise than coordinate-based clipping and handles irregular boundaries.
+    
+    Args:
+        src_raster: rasterio dataset source
+        shapefile_path: Path to Uttarakhand boundary shapefile
+        
+    Returns:
+        tuple: (clipped_array, clipped_transform, clipped_meta) or (None, None, None) if failed
+    """
+    try:
+        # Check if fiona is available
+        if not HAS_FIONA:
+            print("⚠️ fiona not available, skipping shapefile clipping")
+            return None, None, None
+        
+        # Check if shapefile exists
+        if not os.path.exists(shapefile_path):
+            print(f"⚠️ Shapefile not found at {shapefile_path}, skipping clipping")
+            return None, None, None
+        
+        # Load shapefile geometries
+        with fiona.open(shapefile_path, "r") as shapefile:
+            shapes = [feature["geometry"] for feature in shapefile]
+        
+        # Clip raster using shapefile
+        clipped_array, clipped_transform = mask(src_raster, shapes, crop=True, nodata=-9999)
+        
+        # Update metadata for clipped raster
+        clipped_meta = src_raster.meta.copy()
+        clipped_meta.update({
+            "height": clipped_array.shape[1],
+            "width": clipped_array.shape[2], 
+            "transform": clipped_transform,
+            "nodata": -9999
+        })
+        
+        return clipped_array, clipped_transform, clipped_meta
+        
+    except Exception as e:
+        print(f"⚠️ Could not clip raster with shapefile: {e}")
+        return None, None, None
 
 def apply_geographic_masking_to_patch(patch, uttarakhand_mask_patch):
     """
-    Apply geographic masking to a patch, setting non-Uttarakhand areas to background values
+    Apply geographic masking to a patch using shapefile-derived mask.
+    This sets non-Uttarakhand areas to nodata values.
+    
+    Args:
+        patch: Input patch array (H, W, C)
+        uttarakhand_mask_patch: Boolean mask for this patch area
+        
+    Returns:
+        numpy.ndarray: Masked patch with background values outside Uttarakhand
     """
-    if uttarakhand_mask_patch is not None:
-        # Apply mask to all bands except the fire mask (last band)
+    if uttarakhand_mask_patch is not None and uttarakhand_mask_patch.size > 0:
+        # Apply mask to all bands
         masked_patch = patch.copy()
         
-        # Set non-Uttarakhand pixels to 0 (background) for all bands
+        # Ensure mask has same spatial dimensions as patch
+        if uttarakhand_mask_patch.shape != patch.shape[:2]:
+            print(f"⚠️ Mask shape {uttarakhand_mask_patch.shape} doesn't match patch {patch.shape[:2]}")
+            return patch
+        
+        # Set non-Uttarakhand pixels to nodata/background for all bands
         for band_idx in range(patch.shape[-1]):
             if band_idx < patch.shape[-1] - 1:  # Non-fire bands
-                masked_patch[:, :, band_idx][~uttarakhand_mask_patch] = 0
+                masked_patch[:, :, band_idx][~uttarakhand_mask_patch] = -9999  # Use nodata value
             else:  # Fire band - zero out fires outside Uttarakhand
                 masked_patch[:, :, band_idx][~uttarakhand_mask_patch] = 0
                 
