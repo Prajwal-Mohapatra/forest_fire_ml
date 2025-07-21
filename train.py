@@ -186,6 +186,7 @@ def main():
         EarlyStopping(
             monitor=CONFIG['monitor_metric'],  # Use same metric as ModelCheckpoint
             patience=CONFIG['patience'],  # Increased patience for 20-epoch training
+            mode='max',  # Added mode='max' since val_dice_coef should be maximized
             restore_best_weights=True,
             verbose=1
         ),
@@ -193,6 +194,7 @@ def main():
             monitor=CONFIG['monitor_metric'],  # Monitor val_dice_coef instead of val_loss
             factor=CONFIG['factor'],
             patience=CONFIG['patience'] // 2,  # Reduce LR more quickly
+            mode='max',  # Added mode='max' since val_dice_coef should be maximized
             min_lr=CONFIG['min_lr'],
             verbose=1
         ),
