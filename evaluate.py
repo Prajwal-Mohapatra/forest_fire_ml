@@ -147,7 +147,7 @@ def evaluate_model(model_path, test_files, output_dir='outputs'):
         print(f"  Max: {predictions.max():.6f}")
         print(f"  Mean: {predictions.mean():.6f}")
         print(f"  Std: {predictions.std():.6f}")
-        for threshold in [0.05, 0.1, 0.2, 0.3, 0.4, 0.5]:
+        for threshold in [0.1, 0.2, 0.3, 0.4, 0.5]:
             count = (predictions > threshold).sum()
             print(f"  Pixels > {threshold}: {count:,} ({count/predictions.size*100:.2f}%)")
         
