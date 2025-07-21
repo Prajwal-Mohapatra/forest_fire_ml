@@ -3,17 +3,22 @@
 import numpy as np
 import cv2
 
-def normalize_patch(patch, lulc_band_idx=8, n_lulc_classes=4):
+def normalize_patch(patch, lulc_band_idx=8, n_lulc_classes=4, nodata_value=-9999):
     """
     Robust per-band normalization for a 9-band input patch with LULC one-hot encoding.
-    Applies percentile-based normalization to handle outliers.
+    Applies percentile-based normalization to handle outliers and nodata masking.
     Input shape: (H, W, 9) -> Output shape: (H, W, 12) after LULC encoding
     """
     # Ensure input is float32 and contiguous
     patch = np.ascontiguousarray(patch, dtype=np.float32)
     
+    # Handle nodata values by masking them
+    nodata_mask = (patch == nodata_value) | np.isnan(patch) | np.isinf(patch) | (patch < -1e6)
+    patch[nodata_mask] = np.nan
+    
     # Separate LULC band for one-hot encoding
     lulc_band = patch[:, :, lulc_band_idx].astype(np.int32)
+    lulc_band = np.nan_to_num(lulc_band, nan=0)  # Set nodata LULC to class 0
     other_bands = np.concatenate([patch[:, :, :lulc_band_idx], 
                                  patch[:, :, lulc_band_idx+1:]], axis=-1)
     
@@ -22,17 +27,25 @@ def normalize_patch(patch, lulc_band_idx=8, n_lulc_classes=4):
     
     for b in range(other_bands.shape[-1]):
         band = other_bands[:, :, b].astype(np.float32)
-        band = np.nan_to_num(band, nan=0.0, posinf=0.0, neginf=0.0)
         
-        # Use percentile-based normalization for robustness
-        p2, p98 = np.percentile(band, (2, 98))
+        # Mask nodata values before normalization
+        valid_mask = ~(np.isnan(band) | np.isinf(band) | (band == nodata_value))
+        valid_data = band[valid_mask]
         
-        # Ensure percentiles are scalars
-        p2, p98 = float(p2), float(p98)
-        
-        if p98 > p2:
-            band = np.clip(band, p2, p98)
-            norm_patch[:, :, b] = (band - p2) / (p98 - p2)
+        if len(valid_data) > 0:
+            # Use percentile-based normalization only on valid data
+            p2, p98 = np.percentile(valid_data, (2, 98))
+            
+            # Ensure percentiles are scalars
+            p2, p98 = float(p2), float(p98)
+            
+            if p98 > p2:
+                band = np.clip(band, p2, p98)
+                norm_patch[:, :, b] = (band - p2) / (p98 - p2)
+                # Set nodata areas to 0 after normalization
+                norm_patch[~valid_mask, b] = 0.0
+            else:
+                norm_patch[:, :, b] = 0.0
         else:
             norm_patch[:, :, b] = 0.0
     
@@ -70,9 +83,10 @@ def compute_fire_density_map(fire_mask, kernel_size=64):
     fire_density = cv2.filter2D(fire_mask.astype(np.float32), -1, kernel)
     return fire_density
 
-def get_fire_focused_coordinates(fire_mask, patch_size=256, n_patches=50, fire_ratio=0.9):
+def get_fire_focused_coordinates(fire_mask, patch_size=256, n_patches=50, fire_ratio=0.9, min_fire_density=0.05):
     """
     Enhanced patch coordinate generation with focus on fire-prone areas and SMOTE-like augmentation
+    Now ensures patches have minimum fire density
     """
     h, w = fire_mask.shape
     fire_density = compute_fire_density_map(fire_mask, kernel_size=32)  # Smaller kernel for more precision
@@ -81,10 +95,13 @@ def get_fire_focused_coordinates(fire_mask, patch_size=256, n_patches=50, fire_r
     n_fire_patches = int(n_patches * fire_ratio)
     fire_coords = []
     
-    # Level 1: High fire density areas (>2% density)
-    high_fire_indices = np.where(fire_density > 0.02)
+    # Level 1: High fire density areas (>5% density) - Most important
+    high_fire_indices = np.where(fire_density > 0.05)
     if len(high_fire_indices[0]) > 0:
         n_high_fire = min(n_fire_patches // 2, len(high_fire_indices[0]))
+        # Add more patches from high density areas
+        n_high_fire = min(n_fire_patches * 2 // 3, len(high_fire_indices[0]))
+        
         for _ in range(n_high_fire):
             idx = np.random.randint(0, len(high_fire_indices[0]))
             cy, cx = int(high_fire_indices[0][idx]), int(high_fire_indices[1][idx])
@@ -96,10 +113,15 @@ def get_fire_focused_coordinates(fire_mask, patch_size=256, n_patches=50, fire_r
             y = max(0, min(h - patch_size, cy - patch_size // 2 + offset_y))
             x = max(0, min(w - patch_size, cx - patch_size // 2 + offset_x))
             
-            fire_coords.append((int(x), int(y)))
+            # Verify this patch has sufficient fire density
+            patch_fire = fire_mask[y:y+patch_size, x:x+patch_size]
+            patch_density = np.mean(patch_fire) if patch_fire.size > 0 else 0
+            
+            if patch_density >= 0.005:  # Accept patches with at least 0.5% fire
+                fire_coords.append((int(x), int(y)))
     
-    # Level 2: Medium fire density areas (>0.5% density)
-    med_fire_indices = np.where(fire_density > 0.005)
+    # Level 2: Medium fire density areas (>2% density)
+    med_fire_indices = np.where(fire_density > 0.02)
     remaining_fire_patches = n_fire_patches - len(fire_coords)
     if len(med_fire_indices[0]) > 0 and remaining_fire_patches > 0:
         n_med_fire = min(remaining_fire_patches, len(med_fire_indices[0]))
@@ -114,10 +136,15 @@ def get_fire_focused_coordinates(fire_mask, patch_size=256, n_patches=50, fire_r
             y = max(0, min(h - patch_size, cy - patch_size // 2 + offset_y))
             x = max(0, min(w - patch_size, cx - patch_size // 2 + offset_x))
             
-            fire_coords.append((int(x), int(y)))
+            # Verify patch quality
+            patch_fire = fire_mask[y:y+patch_size, x:x+patch_size]
+            patch_density = np.mean(patch_fire) if patch_fire.size > 0 else 0
+            
+            if patch_density >= 0.002:  # Accept patches with at least 0.2% fire
+                fire_coords.append((int(x), int(y)))
     
-    # Level 3: Any fire activity (>0% density)
-    any_fire_indices = np.where(fire_density > 0.0001)
+    # Level 3: Any fire activity (>0.1% density)
+    any_fire_indices = np.where(fire_density > 0.001)
     remaining_fire_patches = n_fire_patches - len(fire_coords)
     if len(any_fire_indices[0]) > 0 and remaining_fire_patches > 0:
         n_any_fire = min(remaining_fire_patches, len(any_fire_indices[0]))
@@ -140,4 +167,5 @@ def get_fire_focused_coordinates(fire_mask, patch_size=256, n_patches=50, fire_r
     
     all_coords = fire_coords + random_coords
     print(f"🔥 Generated {len(fire_coords)} fire-focused coords and {len(random_coords)} random coords")
+    print(f"   High fire density patches: {len([c for c in fire_coords if np.mean(fire_mask[c[1]:c[1]+patch_size, c[0]:c[0]+patch_size]) > 0.05])}")
     return all_coords

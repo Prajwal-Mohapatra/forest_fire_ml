@@ -13,7 +13,7 @@ import keras
 import keras.backend as K
 
 @keras.saving.register_keras_serializable()
-def iou_score(y_true, y_pred, threshold=0.05, smooth=1e-6):
+def iou_score(y_true, y_pred, threshold=0.3, smooth=1e-6):
     """Intersection over Union metric for binary segmentation with configurable threshold"""
     y_true = tf.cast(y_true, tf.float32)
     y_pred = tf.cast(y_pred > threshold, tf.float32)
@@ -22,7 +22,7 @@ def iou_score(y_true, y_pred, threshold=0.05, smooth=1e-6):
     return (intersection + smooth) / (union + smooth)
 
 @keras.saving.register_keras_serializable()
-def dice_coef(y_true, y_pred, threshold=0.05, smooth=1e-6):
+def dice_coef(y_true, y_pred, threshold=0.3, smooth=1e-6):
     """Dice coefficient for binary segmentation with configurable threshold"""
     y_true = tf.cast(y_true, tf.float32)
     y_pred = tf.cast(y_pred > threshold, tf.float32)
@@ -32,7 +32,7 @@ def dice_coef(y_true, y_pred, threshold=0.05, smooth=1e-6):
     return (2. * intersection + smooth) / (tf.reduce_sum(y_true_f) + tf.reduce_sum(y_pred_f) + smooth)
 
 @keras.saving.register_keras_serializable()
-def fire_recall(y_true, y_pred, threshold=0.05, smooth=1e-6):
+def fire_recall(y_true, y_pred, threshold=0.3, smooth=1e-6):
     """Fire-specific recall metric"""
     y_true = tf.cast(y_true, tf.float32)
     y_pred = tf.cast(y_pred > threshold, tf.float32)
@@ -41,7 +41,7 @@ def fire_recall(y_true, y_pred, threshold=0.05, smooth=1e-6):
     return (true_positives + smooth) / (possible_positives + smooth)
 
 @keras.saving.register_keras_serializable()
-def fire_precision(y_true, y_pred, threshold=0.05, smooth=1e-6):
+def fire_precision(y_true, y_pred, threshold=0.3, smooth=1e-6):
     """Fire-specific precision metric"""
     y_true = tf.cast(y_true, tf.float32)
     y_pred = tf.cast(y_pred > threshold, tf.float32)
@@ -50,7 +50,7 @@ def fire_precision(y_true, y_pred, threshold=0.05, smooth=1e-6):
     return (true_positives + smooth) / (predicted_positives + smooth)
 
 @keras.saving.register_keras_serializable()
-def focal_loss(gamma=2.0, alpha=0.75):
+def focal_loss(gamma=2.0, alpha=0.6):
     """Focal loss for handling class imbalance - updated parameters"""
     def focal_loss_fixed(y_true, y_pred):
         epsilon = keras.backend.epsilon()
@@ -63,7 +63,7 @@ def focal_loss(gamma=2.0, alpha=0.75):
     return focal_loss_fixed
 
 custom_objects = {
-        "focal_loss_fixed": focal_loss(gamma=2.0, alpha=0.75),  # Updated parameters      
+        "focal_loss_fixed": focal_loss(gamma=2.0, alpha=0.6),  # Updated parameters      
         'iou_score': iou_score,
         'dice_coef': dice_coef,
         'fire_recall': fire_recall,
@@ -71,7 +71,7 @@ custom_objects = {
     }
 
 def predict_fire_probability(model_path, input_tif_path, output_dir, 
-                           patch_size=256, overlap=64, threshold=0.05,
+                           patch_size=256, overlap=64, threshold=0.3,
                            save_probability=True, save_binary=True):
     """
     Predict fire probability for entire region using sliding window approach
@@ -82,7 +82,7 @@ def predict_fire_probability(model_path, input_tif_path, output_dir,
         output_dir: Directory to save outputs
         patch_size: Size of patches for prediction
         overlap: Overlap between patches
-        threshold: Threshold for binary classification (0-1)
+        threshold: Threshold for binary classification (0-1) - Updated default to 0.3
         save_probability: Whether to save probability map
         save_binary: Whether to save binary fire/no-fire map
     
@@ -207,6 +207,18 @@ def predict_fire_probability(model_path, input_tif_path, output_dir,
             print(f"✅ Binary fire/no-fire map saved to {binary_path}")
         except Exception as e:
             print(f"❌ Failed to save binary map: {str(e)}")
+        
+        # Also save binary maps at multiple thresholds for comparison
+        thresholds_to_test = [0.1, 0.3, 0.5]
+        for test_threshold in thresholds_to_test:
+            test_binary = (prediction > test_threshold).astype(np.uint8)
+            test_binary_path = os.path.join(output_dir, f'fire_binary_map_{test_threshold:.1f}.tif')
+            try:
+                with rasterio.open(test_binary_path, 'w', **binary_profile) as dst:
+                    dst.write(test_binary, 1)
+                print(f"✅ Binary map (threshold {test_threshold}) saved to {test_binary_path}")
+            except Exception as e:
+                print(f"❌ Failed to save binary map at threshold {test_threshold}: {str(e)}")
     
     # Save metadata
     metadata = {
@@ -247,13 +259,13 @@ def predict_fire_probability(model_path, input_tif_path, output_dir,
 
 def predict_with_confidence_zones(input_tif_path, output_dir, results=None):
     """
-    Predict fire probability with confidence zones optimized for low-probability model outputs
+    Predict fire probability with confidence zones optimized for improved thresholds
     
-    Creates multiple threshold maps based on model's actual output range:
-    - High confidence fire (>0.1)    # Top 10% of model range (0.1-0.16)
-    - Medium confidence fire (0.05-0.1)  # Medium range, above binary threshold
-    - Low confidence fire (0.02-0.05)    # Below binary threshold but above background
-    - No fire (<0.02)                    # Background/no-fire
+    Creates multiple threshold maps based on updated threshold strategy:
+    - High confidence fire (>0.3)       # High threshold for confident predictions
+    - Medium confidence fire (0.1-0.3)  # Medium range
+    - Low confidence fire (0.05-0.1)    # Low but detectable
+    - No fire (<0.05)                   # Background/no-fire
     """
     
     # Get probability map    
@@ -268,14 +280,14 @@ def predict_with_confidence_zones(input_tif_path, output_dir, results=None):
     print(f"  - 90th percentile: {np.percentile(prediction, 90):.4f}")
     print(f"  - 75th percentile: {np.percentile(prediction, 75):.4f}")
     
-    # Create confidence zones with optimized thresholds for low-probability model
+    # Create confidence zones with updated thresholds
     confidence_map = np.zeros_like(prediction, dtype=np.uint8)
     
-    # Assign confidence levels based on model's actual output range (0.0-0.16)
-    confidence_map[prediction >= 0.10] = 4   # High confidence fire (>0.10)
-    confidence_map[(prediction >= 0.05) & (prediction < 0.10)] = 3  # Medium confidence fire (0.05-0.10)
-    confidence_map[(prediction >= 0.02) & (prediction < 0.05)] = 2   # Low confidence fire (0.02-0.05)  
-    confidence_map[prediction < 0.02] = 1    # No fire (<0.02)
+    # Assign confidence levels based on updated threshold strategy
+    confidence_map[prediction >= 0.30] = 4   # High confidence fire (>0.30)
+    confidence_map[(prediction >= 0.10) & (prediction < 0.30)] = 3  # Medium confidence fire (0.10-0.30)
+    confidence_map[(prediction >= 0.05) & (prediction < 0.10)] = 2   # Low confidence fire (0.05-0.10)  
+    confidence_map[prediction < 0.05] = 1    # No fire (<0.05)
     
     # Save confidence map
     confidence_path = os.path.join(output_dir, 'fire_confidence_zones.tif')
@@ -301,7 +313,7 @@ def predict_with_confidence_zones(input_tif_path, output_dir, results=None):
         4: "High Confidence Fire"
     }
     
-    print(f"\n🎯 Confidence Zone Statistics (Optimized Thresholds):")
+    print(f"\n🎯 Confidence Zone Statistics (Updated Thresholds):")
     for zone_id, zone_name in zones.items():
         zone_pixels = np.sum(confidence_map == zone_id)
         zone_percentage = (zone_pixels / confidence_map.size) * 100
@@ -309,18 +321,19 @@ def predict_with_confidence_zones(input_tif_path, output_dir, results=None):
     
     # Additional detailed breakdown
     print(f"\n📈 Threshold Breakdown:")
-    print(f"  - Pixels > 0.10 (High): {np.sum(prediction >= 0.10):,}")
-    print(f"  - Pixels 0.05-0.10 (Medium): {np.sum((prediction >= 0.05) & (prediction < 0.10)):,}")
-    print(f"  - Pixels 0.02-0.05 (Low): {np.sum((prediction >= 0.02) & (prediction < 0.05)):,}")
-    print(f"  - Pixels < 0.02 (None): {np.sum(prediction < 0.02):,}")
+    print(f"  - Pixels > 0.30 (High): {np.sum(prediction >= 0.30):,}")
+    print(f"  - Pixels 0.10-0.30 (Medium): {np.sum((prediction >= 0.10) & (prediction < 0.30)):,}")
+    print(f"  - Pixels 0.05-0.10 (Low): {np.sum((prediction >= 0.05) & (prediction < 0.10)):,}")
+    print(f"  - Pixels < 0.05 (None): {np.sum(prediction < 0.05):,}")
     
     return confidence_map
 
 def predict_fire_nextday(model_path, input_tif_path, output_dir, 
-                        threshold=0.05, patch_size=256, overlap=64):
+                        threshold=0.3, patch_size=256, overlap=64):
     """
     Main function to predict fire/no-fire for next day
     Returns binary raster map at 30m resolution
+    Updated default threshold to 0.3 for better precision/recall balance
     """
     
     print("🔥 FIRE PREDICTION FOR NEXT DAY")
@@ -348,6 +361,7 @@ def predict_fire_nextday(model_path, input_tif_path, output_dir,
     print(f"   - fire_binary_map.tif (Binary fire/no-fire)")
     print(f"   - fire_probability_map.tif (Probability 0-1)")
     print(f"   - fire_confidence_zones.tif (Confidence zones)")
+    print(f"   - fire_binary_map_0.1.tif, fire_binary_map_0.3.tif, fire_binary_map_0.5.tif (Multiple thresholds)")
     print(f"   - prediction_metadata.txt (Statistics)")
     
     return results
@@ -384,12 +398,12 @@ def predict_fire_map(input_path, model_path=None, output_dir="outputs", **kwargs
         if model_path is None:
             raise FileNotFoundError("No trained model found. Please provide model_path.")
     
-    # Call the main prediction function
+    # Call the main prediction function with updated default threshold
     return predict_fire_nextday(
         model_path=model_path,
         input_tif_path=input_path,
         output_dir=output_dir,
-        threshold=kwargs.get('threshold', 0.05),
+        threshold=kwargs.get('threshold', 0.3),  # Updated default threshold
         patch_size=kwargs.get('patch_size', 256),
         overlap=kwargs.get('overlap', 64)
     )
@@ -411,13 +425,13 @@ if __name__ == "__main__":
         print(f"❌ Model loading failed: {str(e)}")
         exit(1)
     
-    # Example: Predict fire for next day
+    # Example: Predict fire for next day with updated threshold
     if os.path.exists(input_tif_path):
         results = predict_fire_nextday(
             model_path=model_path,
             input_tif_path=input_tif_path,
             output_dir=output_dir,
-            threshold=0.05  # Adjusted threshold for better detection
+            threshold=0.3  # Updated threshold for better precision/recall balance
         )
         
         print("\n📊 FINAL RESULTS:")

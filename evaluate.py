@@ -48,8 +48,8 @@ def fire_precision(y_true, y_pred, threshold=0.05, smooth=1e-6):
     return (true_positives + smooth) / (predicted_positives + smooth)
 
 @keras.saving.register_keras_serializable()
-def focal_loss(gamma=2.0, alpha=0.25):
-    """Focal loss for handling class imbalance"""
+def focal_loss(gamma=2.0, alpha=0.6):
+    """Focal loss for handling class imbalance - Updated alpha to match training"""
     def focal_loss_fixed(y_true, y_pred):
         epsilon = keras.backend.epsilon()
         y_pred = tf.clip_by_value(y_pred, epsilon, 1. - epsilon)
@@ -62,7 +62,7 @@ def focal_loss(gamma=2.0, alpha=0.25):
 
 # Custom objects for loading model
 custom_objects = {
-        "focal_loss_fixed": focal_loss(gamma=2.0, alpha=0.75),  # Updated parameters        
+        "focal_loss_fixed": focal_loss(gamma=2.0, alpha=0.6),  # Updated parameters to match training      
         'iou_score': iou_score,
         'dice_coef': dice_coef,
         'fire_recall': fire_recall,
@@ -128,19 +128,18 @@ def evaluate_model(model_path, test_files, output_dir='outputs'):
         y_true = np.concatenate(y_true, axis=0)
         print(f"✅ Ground truth collected: {y_true.shape}")
         
-        # Calculate manual metrics with consistent threshold
-        print("📊 Calculating manual metrics...")
-        manual_metrics = calculate_additional_metrics(y_true, predictions, threshold=0.05)
+        # Calculate manual metrics with multiple thresholds
+        print("📊 Calculating manual metrics at multiple thresholds...")
+        thresholds = [0.1, 0.3, 0.5]
         
-        print("\n📈 Manual Metrics (threshold=0.05):")
-        for name, value in manual_metrics.items():
-            print(f"  {name}: {value:.4f}")
-        
-        # Also calculate with higher threshold for comparison
-        manual_metrics_high = calculate_additional_metrics(y_true, predictions, threshold=0.1)
-        print("\n📈 Manual Metrics (threshold=0.1):")
-        for name, value in manual_metrics_high.items():
-            print(f"  {name}: {value:.4f}")
+        for threshold in thresholds:
+            manual_metrics = calculate_additional_metrics(y_true, predictions, threshold=threshold)
+            print(f"\n📈 Manual Metrics (threshold={threshold}):")
+            for name, value in manual_metrics.items():
+                if name not in ['true_positives', 'false_positives', 'false_negatives', 'true_negatives']:
+                    print(f"  {name}: {value:.4f}")
+                else:
+                    print(f"  {name}: {int(value)}")
         
         # Print prediction statistics for debugging
         print(f"\n📊 Prediction Statistics:")
@@ -148,8 +147,9 @@ def evaluate_model(model_path, test_files, output_dir='outputs'):
         print(f"  Max: {predictions.max():.6f}")
         print(f"  Mean: {predictions.mean():.6f}")
         print(f"  Std: {predictions.std():.6f}")
-        print(f"  Pixels > 0.05: {(predictions > 0.05).sum()}")
-        print(f"  Pixels > 0.1: {(predictions > 0.1).sum()}")
+        for threshold in [0.05, 0.1, 0.3, 0.5]:
+            count = (predictions > threshold).sum()
+            print(f"  Pixels > {threshold}: {count:,} ({count/predictions.size*100:.2f}%)")
         
         # Ensure output directory exists
         os.makedirs(f'{output_dir}/plots', exist_ok=True)

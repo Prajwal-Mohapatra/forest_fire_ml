@@ -8,7 +8,7 @@ from datetime import datetime
 from model.resunet_a import build_resunet_a
 from dataset.loader import FireDatasetGenerator
 from utils.metrics import iou_score, dice_coef, focal_loss, fire_recall, fire_precision
-from keras.callbacks import ModelCheckpoint, EarlyStopping, ReduceLROnPlateau, CSVLogger, TensorBoard
+from keras.callbacks import ModelCheckpoint, EarlyStopping, ReduceLROnPlateau, CSVLogger, TensorBoard, LearningRateScheduler
 
 from sklearn.model_selection import train_test_split
 
@@ -83,6 +83,14 @@ def create_datasets(base_dir):
     
     return train_files, val_files, test_files
 
+def warmup_scheduler(epoch, lr, CONFIG):
+    """Learning rate warmup scheduler"""
+    if epoch < CONFIG['warmup_epochs']:
+        # Linear warmup from initial LR to max LR
+        return CONFIG['learning_rate'] + (CONFIG['max_learning_rate'] - CONFIG['learning_rate']) * (epoch / CONFIG['warmup_epochs'])
+    else:
+        return lr  # Use normal scheduler after warmup
+
 def main():
     # Configuration - Optimized for improved fire detection with aggressive class imbalance handling
     CONFIG = {
@@ -90,18 +98,21 @@ def main():
         'batch_size': 8,
         'n_patches_per_img': 30,      # Increased from 25 for more diversity
         'epochs': 20,                 # Increased from 10 for better learning
-        'learning_rate': 1e-4,        # Learning rate with warmup
+        'learning_rate': 1e-5,        # Start with lower LR for warmup
+        'max_learning_rate': 1e-4,    # Target LR after warmup
+        'warmup_epochs': 5,           # Warmup epochs for LR scheduler
         'fire_focus_ratio': 0.9,      # Increased from 0.8 - even more fire examples
-        'fire_patch_ratio': 0.2,      # Minimum 20% fire-positive patches per batch
+        'fire_patch_ratio': 0.3,      # Increased from 0.2 - more fire-positive patches per batch
         'focal_gamma': 2.0,           # Hard example focus
-        'focal_alpha': 0.75,          # Increased from 0.6 - stronger fire class emphasis
+        'focal_alpha': 0.6,           # Reduced from 0.75 - better precision/recall balance
         'dropout_rate': 0.2,          # Increased from 0.1 for better regularization
+        'weight_decay': 1e-5,         # L2 regularization
 
         # Enhanced Callback Configuration
-        'patience': 8,                # Increased patience for 20-epoch training
+        'patience': 10,               # Increased patience from 8 for longer training
         'factor': 0.5,                # Learning rate reduction factor
         'min_lr': 1e-7,               # Minimum learning rate
-        'monitor_metric': 'val_fire_recall',  # Focus on fire detection
+        'monitor_metric': 'val_dice_coef',  # Changed from val_fire_recall to balance precision/recall
 
         'debug_mode': False,          # Set to True to disable all augmentation
     }
@@ -142,14 +153,18 @@ def main():
         augment=False  # Never augment validation data
     )
     
-    # Build model with enhanced dropout and correct input shape
+    # Build model with enhanced dropout and L2 regularization
     model = build_resunet_a(
         input_shape=(CONFIG['patch_size'], CONFIG['patch_size'], 12),  # 12 channels after LULC encoding
-        dropout_rate=CONFIG['dropout_rate']
+        dropout_rate=CONFIG['dropout_rate'],
+        weight_decay=CONFIG['weight_decay']  # Pass L2 regularization parameter
     )
     
-    # Compile with focal loss and enhanced metrics
-    optimizer = keras.optimizers.Adam(learning_rate=CONFIG['learning_rate'])
+    # Compile with focal loss and enhanced metrics, L2 regularization through optimizer
+    optimizer = keras.optimizers.Adam(
+        learning_rate=CONFIG['learning_rate'],
+        weight_decay=CONFIG['weight_decay']  # Add L2 regularization
+    )
     model.compile(
         optimizer=optimizer,
         loss=focal_loss(gamma=CONFIG['focal_gamma'], alpha=CONFIG['focal_alpha']),
@@ -163,22 +178,26 @@ def main():
     callbacks = [
         ModelCheckpoint(
             f'{output_dir}/checkpoints/best_model.keras',
-            monitor=CONFIG['monitor_metric'],  # Monitor fire recall instead of IoU
+            monitor=CONFIG['monitor_metric'],  # Now monitoring val_dice_coef for better balance
             save_best_only=True,
             mode='max',
             verbose=1
         ),
         EarlyStopping(
-            monitor='val_loss',
+            monitor=CONFIG['monitor_metric'],  # Use same metric as ModelCheckpoint
             patience=CONFIG['patience'],  # Increased patience for 20-epoch training
             restore_best_weights=True,
             verbose=1
         ),
         ReduceLROnPlateau(
-            monitor='val_loss',
+            monitor=CONFIG['monitor_metric'],  # Monitor val_dice_coef instead of val_loss
             factor=CONFIG['factor'],
             patience=CONFIG['patience'] // 2,  # Reduce LR more quickly
             min_lr=CONFIG['min_lr'],
+            verbose=1
+        ),
+        LearningRateScheduler(
+            lambda epoch, lr: warmup_scheduler(epoch, lr, CONFIG),
             verbose=1
         ),
         CSVLogger(f'{output_dir}/logs/training_log.csv'),
@@ -234,42 +253,58 @@ def plot_training_history(history, output_dir):
     # Dice Coefficient
     axes[1, 0].plot(history.history['dice_coef'], label='Train Dice')
     axes[1, 0].plot(history.history['val_dice_coef'], label='Val Dice')
-    axes[1, 0].set_title('Dice Coefficient')
+    axes[1, 0].set_title('Dice Coefficient (Monitoring Metric)')
     axes[1, 0].set_xlabel('Epoch')
     axes[1, 0].set_ylabel('Dice')
     axes[1, 0].legend()
     axes[1, 0].grid(True)
     
-    # Fire Recall (Most Important for Fire Detection)
-    if 'fire_recall' in history.history:
-        axes[1, 1].plot(history.history['fire_recall'], label='Train Fire Recall', color='red')
-        axes[1, 1].plot(history.history['val_fire_recall'], label='Val Fire Recall', color='darkred')
-        axes[1, 1].set_title('Fire Recall (Key Metric)')
+    # F1-Score (harmonic mean of precision and recall)
+    if 'fire_recall' in history.history and 'fire_precision' in history.history:
+        train_f1 = []
+        val_f1 = []
+        
+        for i in range(len(history.history['fire_recall'])):
+            train_prec = history.history['fire_precision'][i]
+            train_rec = history.history['fire_recall'][i]
+            val_prec = history.history['val_fire_precision'][i] if 'val_fire_precision' in history.history else 0
+            val_rec = history.history['val_fire_recall'][i] if 'val_fire_recall' in history.history else 0
+            
+            # Calculate F1-score
+            train_f1_val = 2 * train_prec * train_rec / (train_prec + train_rec) if (train_prec + train_rec) > 0 else 0
+            val_f1_val = 2 * val_prec * val_rec / (val_prec + val_rec) if (val_prec + val_rec) > 0 else 0
+            
+            train_f1.append(train_f1_val)
+            val_f1.append(val_f1_val)
+        
+        axes[1, 1].plot(train_f1, label='Train F1-Score', color='green')
+        axes[1, 1].plot(val_f1, label='Val F1-Score', color='darkgreen')
+        axes[1, 1].set_title('F1-Score (Precision-Recall Balance)')
         axes[1, 1].set_xlabel('Epoch')
-        axes[1, 1].set_ylabel('Recall')
+        axes[1, 1].set_ylabel('F1-Score')
         axes[1, 1].legend()
         axes[1, 1].grid(True)
     else:
-        axes[1, 1].text(0.5, 0.5, 'Fire Recall\nNot Available', ha='center', va='center', transform=axes[1, 1].transAxes)
-        axes[1, 1].set_title('Fire Recall')
+        axes[1, 1].text(0.5, 0.5, 'F1-Score\nNot Available', ha='center', va='center', transform=axes[1, 1].transAxes)
+        axes[1, 1].set_title('F1-Score')
     
-    # Fire Precision
-    if 'fire_precision' in history.history:
-        axes[2, 0].plot(history.history['fire_precision'], label='Train Fire Precision', color='orange')
-        axes[2, 0].plot(history.history['val_fire_precision'], label='Val Fire Precision', color='darkorange')
-        axes[2, 0].set_title('Fire Precision')
+    # Fire Recall
+    if 'fire_recall' in history.history:
+        axes[2, 0].plot(history.history['fire_recall'], label='Train Fire Recall', color='red', linewidth=2)
+        axes[2, 0].plot(history.history['val_fire_recall'], label='Val Fire Recall', color='darkred', linewidth=2)
+        axes[2, 0].set_title('Fire Recall')
         axes[2, 0].set_xlabel('Epoch')
-        axes[2, 0].set_ylabel('Precision')
+        axes[2, 0].set_ylabel('Recall')
         axes[2, 0].legend()
         axes[2, 0].grid(True)
     else:
-        axes[2, 0].text(0.5, 0.5, 'Fire Precision\nNot Available', ha='center', va='center', transform=axes[2, 0].transAxes)
-        axes[2, 0].set_title('Fire Precision')
+        axes[2, 0].text(0.5, 0.5, 'Fire Recall\nNot Available', ha='center', va='center', transform=axes[2, 0].transAxes)
+        axes[2, 0].set_title('Fire Recall')
     
     # Learning Rate
     if 'lr' in history.history:
         axes[2, 1].plot(history.history['lr'], label='Learning Rate', color='green')
-        axes[2, 1].set_title('Learning Rate')
+        axes[2, 1].set_title('Learning Rate (with Warmup)')
         axes[2, 1].set_xlabel('Epoch')
         axes[2, 1].set_ylabel('LR')
         axes[2, 1].set_yscale('log')
@@ -282,16 +317,34 @@ def plot_training_history(history, output_dir):
     plt.tight_layout()
     plt.savefig(f'{output_dir}/plots/training_history.png', dpi=300, bbox_inches='tight')
     
-    # Also create a focused plot on fire-specific metrics
+    # Also create a focused plot on fire-specific metrics with F1-score
     if 'fire_recall' in history.history and 'fire_precision' in history.history:
-        fig2, ax = plt.subplots(1, 1, figsize=(10, 6))
+        fig2, ax = plt.subplots(1, 1, figsize=(12, 8))
         
         ax.plot(history.history['fire_recall'], label='Train Fire Recall', color='red', linewidth=2)
         ax.plot(history.history['val_fire_recall'], label='Val Fire Recall', color='darkred', linewidth=2)
         ax.plot(history.history['fire_precision'], label='Train Fire Precision', color='orange', linewidth=2)
         ax.plot(history.history['val_fire_precision'], label='Val Fire Precision', color='darkorange', linewidth=2)
         
-        ax.set_title('Fire Detection Metrics (Recall & Precision)', fontsize=14)
+        # Add F1-score
+        train_f1 = []
+        val_f1 = []
+        for i in range(len(history.history['fire_recall'])):
+            train_prec = history.history['fire_precision'][i]
+            train_rec = history.history['fire_recall'][i]
+            val_prec = history.history['val_fire_precision'][i] if 'val_fire_precision' in history.history else 0
+            val_rec = history.history['val_fire_recall'][i] if 'val_fire_recall' in history.history else 0
+            
+            train_f1_val = 2 * train_prec * train_rec / (train_prec + train_rec) if (train_prec + train_rec) > 0 else 0
+            val_f1_val = 2 * val_prec * val_rec / (val_prec + val_rec) if (val_prec + val_rec) > 0 else 0
+            
+            train_f1.append(train_f1_val)
+            val_f1.append(val_f1_val)
+        
+        ax.plot(train_f1, label='Train F1-Score', color='green', linewidth=2, linestyle='--')
+        ax.plot(val_f1, label='Val F1-Score', color='darkgreen', linewidth=2, linestyle='--')
+        
+        ax.set_title('Fire Detection Metrics (Recall, Precision & F1-Score)', fontsize=14)
         ax.set_xlabel('Epoch', fontsize=12)
         ax.set_ylabel('Metric Value', fontsize=12)
         ax.legend(fontsize=10)
