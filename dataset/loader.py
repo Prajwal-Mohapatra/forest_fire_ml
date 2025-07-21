@@ -29,7 +29,12 @@ class FireDatasetGenerator(Sequence):
                 A.HorizontalFlip(p=0.5),
                 A.VerticalFlip(p=0.5),
                 A.RandomRotate90(p=0.5),
-                A.ShiftScaleRotate(shift_limit=0.1, scale_limit=0.1, rotate_limit=15, p=0.5),  # Added for more variability
+                A.Affine(
+                    scale=(0.9, 1.1),  # scale_limit=0.1 means 90% to 110% scaling
+                    translate_percent=(-0.1, 0.1),  # shift_limit=0.1 means ±10% translation
+                    rotate=(-15, 15),  # rotate_limit=15 means ±15 degrees rotation
+                    p=0.5
+                ),  # Replaced ShiftScaleRotate with proper Affine parameters
                 
                 # Simple photometric augmentations (fixed parameters)
                 A.RandomBrightnessContrast(brightness_limit=(-0.1, 0.1), contrast_limit=(-0.1, 0.1), p=0.4),  # Fixed: tuple format
