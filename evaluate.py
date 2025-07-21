@@ -11,7 +11,7 @@ import keras
 import keras.backend as K
 
 @keras.saving.register_keras_serializable()
-def iou_score(y_true, y_pred, threshold=0.05, smooth=1e-6):
+def iou_score(y_true, y_pred, threshold=0.3, smooth=1e-6):
     """Intersection over Union metric for binary segmentation with configurable threshold"""
     y_true = tf.cast(y_true, tf.float32)
     y_pred = tf.cast(y_pred > threshold, tf.float32)
@@ -20,7 +20,7 @@ def iou_score(y_true, y_pred, threshold=0.05, smooth=1e-6):
     return (intersection + smooth) / (union + smooth)
 
 @keras.saving.register_keras_serializable()
-def dice_coef(y_true, y_pred, threshold=0.05, smooth=1e-6):
+def dice_coef(y_true, y_pred, threshold=0.3, smooth=1e-6):
     """Dice coefficient for binary segmentation with configurable threshold"""
     y_true = tf.cast(y_true, tf.float32)
     y_pred = tf.cast(y_pred > threshold, tf.float32)
@@ -30,7 +30,7 @@ def dice_coef(y_true, y_pred, threshold=0.05, smooth=1e-6):
     return (2. * intersection + smooth) / (tf.reduce_sum(y_true_f) + tf.reduce_sum(y_pred_f) + smooth)
 
 @keras.saving.register_keras_serializable()
-def fire_recall(y_true, y_pred, threshold=0.05, smooth=1e-6):
+def fire_recall(y_true, y_pred, threshold=0.3, smooth=1e-6):
     """Fire-specific recall metric"""
     y_true = tf.cast(y_true, tf.float32)
     y_pred = tf.cast(y_pred > threshold, tf.float32)
@@ -39,7 +39,7 @@ def fire_recall(y_true, y_pred, threshold=0.05, smooth=1e-6):
     return (true_positives + smooth) / (possible_positives + smooth)
 
 @keras.saving.register_keras_serializable()
-def fire_precision(y_true, y_pred, threshold=0.05, smooth=1e-6):
+def fire_precision(y_true, y_pred, threshold=0.3, smooth=1e-6):
     """Fire-specific precision metric"""
     y_true = tf.cast(y_true, tf.float32)
     y_pred = tf.cast(y_pred > threshold, tf.float32)
@@ -204,7 +204,7 @@ def visualize_predictions(y_true, y_pred, output_dir, n_samples=8):
     print(f"✅ Visualization saved to {output_path}")
     plt.show()
 
-def calculate_additional_metrics(y_true, y_pred, threshold=0.05):
+def calculate_additional_metrics(y_true, y_pred, threshold=0.3):
     """Calculate additional evaluation metrics"""
     
     # Convert to binary predictions

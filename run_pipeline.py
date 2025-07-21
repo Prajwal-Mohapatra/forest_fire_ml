@@ -64,7 +64,7 @@ def run_prediction(model_path, input_tif, output_path):
             model_path=model_path,
             input_tif_path=input_tif,
             output_dir=output_dir,
-            threshold=0.05,  # Use optimized threshold
+            threshold=0.3,  # Use optimized threshold
             patch_size=256,
             overlap=64
         )
@@ -85,7 +85,7 @@ def run_prediction(model_path, input_tif, output_path):
             model_path=model_path,
             input_tif_path=input_tif,
             output_dir=output_dir,
-            threshold=0.05,  # Use optimized threshold
+            threshold=0.3,  # Use optimized threshold
             patch_size=256,
             overlap=64
         )
