@@ -6,7 +6,7 @@ import rasterio
 from keras.utils import Sequence
 from datetime import datetime, timedelta
 import albumentations as A
-from utils.preprocess import normalize_patch, get_fire_focused_coordinates
+from utils.preprocess import normalize_patch, get_fire_focused_coordinates, create_uttarakhand_mask_from_coords, apply_geographic_masking_to_patch
 
 class FireDatasetGenerator(Sequence):
     def __init__(self, tif_paths, patch_size=256, batch_size=8, n_patches_per_img=50,
@@ -51,7 +51,7 @@ class FireDatasetGenerator(Sequence):
         print(f"✅ Dataset loaded successfully! {len(self.samples)} patches from {len(self.tif_paths)} days.")
 
     def _generate_temporal_patches(self):
-        """Generate patches with temporal awareness and fire focus"""
+        """Generate patches with temporal awareness, fire focus, and Uttarakhand geographic masking"""
         all_samples = []
         fire_samples = []
         no_fire_samples = []
@@ -60,16 +60,32 @@ class FireDatasetGenerator(Sequence):
             try:
                 with rasterio.open(tif_path) as src:
                     # Read fire mask to identify fire-prone areas
-                    fire_mask = src.read(10)  # Band 10 is fire mask
+                    fire_mask_raw = src.read(10)  # Band 10 is fire mask
                     
-                    # Get fire-focused coordinates
+                    # Apply Uttarakhand masking to the full image fire mask
+                    try:
+                        uttarakhand_mask_full = create_uttarakhand_mask_from_coords(
+                            src.height, src.width, src.transform
+                        )
+                        fire_mask = fire_mask_raw * uttarakhand_mask_full  # Apply geographic masking
+                        
+                        # Log masking effectiveness
+                        raw_fires = np.sum(fire_mask_raw > 0)
+                        masked_fires = np.sum(fire_mask > 0)
+                        if day_idx == 0:  # Log only for first file to avoid spam
+                            print(f"🗺️ Geographic masking: {raw_fires} -> {masked_fires} fire pixels ({masked_fires/raw_fires*100 if raw_fires > 0 else 0:.1f}%)")
+                    except Exception as mask_error:
+                        print(f"⚠️ Failed to apply Uttarakhand masking to {tif_path}: {mask_error}")
+                        fire_mask = fire_mask_raw  # Fallback to raw mask
+                    
+                    # Get fire-focused coordinates using the masked fire data
                     coords = get_fire_focused_coordinates(
                         fire_mask, self.patch_size, self.n_patches_per_img, self.fire_focus_ratio
                     )
                     
                     # Add temporal context and separate fire from no-fire samples
                     for x, y in coords:
-                        # Ensure fire density is a scalar value
+                        # Ensure fire density is a scalar value using masked fire data
                         fire_patch = fire_mask[y:y+self.patch_size, x:x+self.patch_size]
                         fire_density = float(np.mean(fire_patch))  # Explicitly convert to Python float
                         
@@ -81,8 +97,8 @@ class FireDatasetGenerator(Sequence):
                             'fire_density': fire_density
                         }
                         
-                        # Separate samples based on fire presence
-                        if fire_density > 0.001:  # More sensitive threshold for fire detection
+                        # Separate samples based on fire presence (using masked data)
+                        if fire_density > 0.001:  # Updated to more sensitive threshold for fire detection
                             fire_samples.append(sample)
                         else:
                             no_fire_samples.append(sample)
@@ -99,7 +115,7 @@ class FireDatasetGenerator(Sequence):
         
         # Sort by fire density to prioritize fire-rich patches
         all_samples.sort(key=lambda x: x['fire_density'], reverse=True)
-        print(f"📊 Dataset composition: {len(fire_samples)} fire patches, {len(no_fire_samples)} no-fire patches")
+        print(f"📊 Dataset composition: {len(fire_samples)} fire patches, {len(no_fire_samples)} no-fire patches (after Uttarakhand masking)")
         return all_samples
 
     def __len__(self):
@@ -151,6 +167,23 @@ class FireDatasetGenerator(Sequence):
                         boundless=True, fill_value=0
                     ).astype(np.float32)
                 
+                    # Create Uttarakhand mask for this patch
+                    try:
+                        uttarakhand_mask_patch = create_uttarakhand_mask_from_coords(
+                            self.patch_size, self.patch_size, src.transform
+                        )
+                        # Adjust mask coordinates for the patch window
+                        patch_transform = rasterio.windows.transform(
+                            rasterio.windows.Window(x, y, self.patch_size, self.patch_size),
+                            src.transform
+                        )
+                        uttarakhand_mask_patch = create_uttarakhand_mask_from_coords(
+                            self.patch_size, self.patch_size, patch_transform
+                        )
+                    except Exception as mask_error:
+                        print(f"⚠️ Failed to create Uttarakhand mask for patch: {mask_error}")
+                        uttarakhand_mask_patch = np.ones((self.patch_size, self.patch_size), dtype=bool)
+                
                 # Clean data and ensure proper shape
                 patch = np.nan_to_num(patch, nan=0.0, posinf=0.0, neginf=0.0)
                 patch = np.moveaxis(patch, 0, -1)  # (H, W, C)
@@ -160,9 +193,12 @@ class FireDatasetGenerator(Sequence):
                     print(f"⚠️ Unexpected patch shape: {patch.shape}")
                     continue
                 
+                # Apply geographic masking to the raw patch before processing
+                patch = apply_geographic_masking_to_patch(patch, uttarakhand_mask_patch)
+                
                 # Separate features and target
                 img = normalize_patch(patch[:, :, :9])  # First 9 bands -> becomes 12 after LULC encoding
-                mask = (patch[:, :, 9] > 0).astype(np.float32)  # Fire mask
+                mask = (patch[:, :, 9] > 0).astype(np.float32)  # Fire mask (already masked to Uttarakhand)
                 mask = np.expand_dims(mask, -1)
                 
                 # Ensure arrays are contiguous and proper dtype

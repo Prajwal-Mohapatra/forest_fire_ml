@@ -11,7 +11,7 @@ import keras
 import keras.backend as K
 
 @keras.saving.register_keras_serializable()
-def iou_score(y_true, y_pred, threshold=0.3, smooth=1e-6):
+def iou_score(y_true, y_pred, threshold=0.4, smooth=1e-6):
     """Intersection over Union metric for binary segmentation with configurable threshold"""
     y_true = tf.cast(y_true, tf.float32)
     y_pred = tf.cast(y_pred > threshold, tf.float32)
@@ -20,7 +20,7 @@ def iou_score(y_true, y_pred, threshold=0.3, smooth=1e-6):
     return (intersection + smooth) / (union + smooth)
 
 @keras.saving.register_keras_serializable()
-def dice_coef(y_true, y_pred, threshold=0.3, smooth=1e-6):
+def dice_coef(y_true, y_pred, threshold=0.4, smooth=1e-6):
     """Dice coefficient for binary segmentation with configurable threshold"""
     y_true = tf.cast(y_true, tf.float32)
     y_pred = tf.cast(y_pred > threshold, tf.float32)
@@ -30,7 +30,7 @@ def dice_coef(y_true, y_pred, threshold=0.3, smooth=1e-6):
     return (2. * intersection + smooth) / (tf.reduce_sum(y_true_f) + tf.reduce_sum(y_pred_f) + smooth)
 
 @keras.saving.register_keras_serializable()
-def fire_recall(y_true, y_pred, threshold=0.3, smooth=1e-6):
+def fire_recall(y_true, y_pred, threshold=0.4, smooth=1e-6):
     """Fire-specific recall metric"""
     y_true = tf.cast(y_true, tf.float32)
     y_pred = tf.cast(y_pred > threshold, tf.float32)
@@ -39,7 +39,7 @@ def fire_recall(y_true, y_pred, threshold=0.3, smooth=1e-6):
     return (true_positives + smooth) / (possible_positives + smooth)
 
 @keras.saving.register_keras_serializable()
-def fire_precision(y_true, y_pred, threshold=0.3, smooth=1e-6):
+def fire_precision(y_true, y_pred, threshold=0.4, smooth=1e-6):
     """Fire-specific precision metric"""
     y_true = tf.cast(y_true, tf.float32)
     y_pred = tf.cast(y_pred > threshold, tf.float32)
@@ -130,7 +130,7 @@ def evaluate_model(model_path, test_files, output_dir='outputs'):
         
         # Calculate manual metrics with multiple thresholds
         print("📊 Calculating manual metrics at multiple thresholds...")
-        thresholds = [0.1, 0.3, 0.5]
+        thresholds = [0.1, 0.2, 0.3, 0.4, 0.5]
         
         for threshold in thresholds:
             manual_metrics = calculate_additional_metrics(y_true, predictions, threshold=threshold)
@@ -147,7 +147,7 @@ def evaluate_model(model_path, test_files, output_dir='outputs'):
         print(f"  Max: {predictions.max():.6f}")
         print(f"  Mean: {predictions.mean():.6f}")
         print(f"  Std: {predictions.std():.6f}")
-        for threshold in [0.05, 0.1, 0.3, 0.5]:
+        for threshold in [0.05, 0.1, 0.2, 0.3, 0.4, 0.5]:
             count = (predictions > threshold).sum()
             print(f"  Pixels > {threshold}: {count:,} ({count/predictions.size*100:.2f}%)")
         
@@ -204,7 +204,7 @@ def visualize_predictions(y_true, y_pred, output_dir, n_samples=8):
     print(f"✅ Visualization saved to {output_path}")
     plt.show()
 
-def calculate_additional_metrics(y_true, y_pred, threshold=0.3):
+def calculate_additional_metrics(y_true, y_pred, threshold=0.4):
     """Calculate additional evaluation metrics"""
     
     # Convert to binary predictions

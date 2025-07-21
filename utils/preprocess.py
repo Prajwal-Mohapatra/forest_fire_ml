@@ -2,6 +2,63 @@
 # ====================
 import numpy as np
 import cv2
+import rasterio
+
+def create_uttarakhand_mask_from_coords(height, width, transform):
+    """
+    Create a mask for Uttarakhand state boundaries using transform information.
+    Uttarakhand approximate boundaries:
+    - Latitude: 28.43° N to 31.28° N
+    - Longitude: 77.34° E to 81.03° E
+    """
+    try:
+        # Create coordinate grids
+        cols, rows = np.meshgrid(np.arange(width), np.arange(height))
+        xs, ys = rasterio.transform.xy(transform, rows, cols)
+        lons = np.array(xs)
+        lats = np.array(ys)
+        
+        # Define Uttarakhand boundaries (approximate)
+        uttarakhand_bounds = {
+            'lat_min': 28.43,  # Southern boundary
+            'lat_max': 31.28,  # Northern boundary  
+            'lon_min': 77.34,  # Western boundary
+            'lon_max': 81.03   # Eastern boundary
+        }
+        
+        # Create mask - True for pixels within Uttarakhand
+        uttarakhand_mask = (
+            (lats >= uttarakhand_bounds['lat_min']) &
+            (lats <= uttarakhand_bounds['lat_max']) &
+            (lons >= uttarakhand_bounds['lon_min']) &
+            (lons <= uttarakhand_bounds['lon_max'])
+        )
+        
+        return uttarakhand_mask.astype(bool)
+        
+    except Exception as e:
+        print(f"⚠️ Could not create Uttarakhand mask: {e}")
+        # Return an all-True mask as fallback
+        return np.ones((height, width), dtype=bool)
+
+def apply_geographic_masking_to_patch(patch, uttarakhand_mask_patch):
+    """
+    Apply geographic masking to a patch, setting non-Uttarakhand areas to background values
+    """
+    if uttarakhand_mask_patch is not None:
+        # Apply mask to all bands except the fire mask (last band)
+        masked_patch = patch.copy()
+        
+        # Set non-Uttarakhand pixels to 0 (background) for all bands
+        for band_idx in range(patch.shape[-1]):
+            if band_idx < patch.shape[-1] - 1:  # Non-fire bands
+                masked_patch[:, :, band_idx][~uttarakhand_mask_patch] = 0
+            else:  # Fire band - zero out fires outside Uttarakhand
+                masked_patch[:, :, band_idx][~uttarakhand_mask_patch] = 0
+                
+        return masked_patch
+    else:
+        return patch
 
 def normalize_patch(patch, lulc_band_idx=8, n_lulc_classes=4, nodata_value=-9999):
     """
@@ -83,7 +140,7 @@ def compute_fire_density_map(fire_mask, kernel_size=64):
     fire_density = cv2.filter2D(fire_mask.astype(np.float32), -1, kernel)
     return fire_density
 
-def get_fire_focused_coordinates(fire_mask, patch_size=256, n_patches=50, fire_ratio=0.9, min_fire_density=0.05):
+def get_fire_focused_coordinates(fire_mask, patch_size=256, n_patches=50, fire_ratio=0.9, min_fire_density=0.001):
     """
     Enhanced patch coordinate generation with focus on fire-prone areas and SMOTE-like augmentation
     Now ensures patches have minimum fire density

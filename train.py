@@ -102,7 +102,7 @@ def main():
         'max_learning_rate': 1e-4,    # Target LR after warmup
         'warmup_epochs': 5,           # Warmup epochs for LR scheduler
         'fire_focus_ratio': 0.9,      # Increased from 0.8 - even more fire examples
-        'fire_patch_ratio': 0.3,      # Increased from 0.2 - more fire-positive patches per batch
+        'fire_patch_ratio': 0.4,      # Increased from 0.3 - more fire-positive patches per batch
         'focal_gamma': 2.0,           # Hard example focus
         'focal_alpha': 0.6,           # Reduced from 0.75 - better precision/recall balance
         'dropout_rate': 0.2,          # Increased from 0.1 for better regularization
@@ -160,7 +160,7 @@ def main():
         weight_decay=CONFIG['weight_decay']  # Pass L2 regularization parameter
     )
     
-    # Compile with focal loss and enhanced metrics, L2 regularization through optimizer
+    # Compile with focal loss and enhanced metrics, L2 regularization through optimizer, and class weights
     optimizer = keras.optimizers.Adam(
         learning_rate=CONFIG['learning_rate'],
         weight_decay=CONFIG['weight_decay']  # Add L2 regularization
@@ -171,8 +171,12 @@ def main():
         metrics=[iou_score, dice_coef, fire_recall, fire_precision]
     )
     
+    # Add class weights to handle severe class imbalance
+    class_weight = {0: 1, 1: 50}  # Give 50x more weight to fire pixels during training
+    
     print("Model compiled successfully!")
     print(f"Model parameters: {model.count_params():,}")
+    print(f"Class weights applied: {class_weight}")
     
     # Callbacks
     callbacks = [
@@ -220,6 +224,7 @@ def main():
         validation_data=val_gen,
         epochs=CONFIG['epochs'],
         callbacks=callbacks,
+        class_weight=class_weight,  # Apply class weights to handle imbalance
         verbose=1
     )
     
