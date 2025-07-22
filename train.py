@@ -95,9 +95,9 @@ def main():
     # Configuration - Optimized for improved fire detection with aggressive class imbalance handling
     CONFIG = {
         'patch_size': 256,
-        'batch_size': 8,
-        'n_patches_per_img': 30,       # REDUCED for debugging - was 30
-        'epochs': 20,                  # REDUCED for testing - was 20
+        'batch_size': 1,               # REDUCED for testing - was 8
+        'n_patches_per_img': 10,       # REDUCED for debugging - was 30
+        'epochs': 1,                   # REDUCED for testing - was 20
         'learning_rate': 1e-5,        # Start with lower LR for warmup
         'max_learning_rate': 1e-4,    # Target LR after warmup
         'warmup_epochs': 5,           # Warmup epochs for LR scheduler
@@ -114,7 +114,7 @@ def main():
         'min_lr': 1e-7,               # Minimum learning rate
         'monitor_metric': 'val_dice_coef',  # Changed from val_fire_recall to balance precision/recall
 
-        'debug_mode': False,           # ENABLED for debugging - disables augmentation
+        'debug_mode': True,           # ENABLED for debugging - disables augmentation
     }
     
     print("🔥 Starting Fire Prediction Model Training...")
@@ -178,6 +178,13 @@ def main():
     print(f"Model parameters: {model.count_params():,}")
     print(f"Class weights applied: {class_weight} (type: {type(class_weight[0])}, {type(class_weight[1])})")
     
+    # CRITICAL FIX: Debug print to verify Y shape and type before training
+    print("🔬 Verifying data generator output...")
+    x_sample, y_sample = next(iter(train_gen))
+    print(f"Y sample shape: {y_sample.shape}, dtype: {y_sample.dtype}, unique: {np.unique(y_sample)}")
+    print(f"X sample shape: {x_sample.shape}, dtype: {x_sample.dtype}")
+    print(f"Y value range: [{np.min(y_sample)}, {np.max(y_sample)}]")
+    
     # Callbacks
     callbacks = [
         ModelCheckpoint(
@@ -217,12 +224,8 @@ def main():
         TrainingMonitor()
     ]
     
-    # Train model with enhanced error handling and debugging
-    print("Starting training...")
-    
-    # Try training with class weights first, fallback if errors occur
-    # try:
-    print("🔥 Attempting training with class weights...")
+    # Train model with class weights - no fallback for testing
+    print("🔥 Starting training with class weights...")
     history = model.fit(
         train_gen,
         validation_data=val_gen,
@@ -232,27 +235,6 @@ def main():
         verbose=2
     )
     print("✅ Training with class weights successful!")
-        
-    # except Exception as class_weight_error:
-    #     print(f"❌ Training with class weights failed: {class_weight_error}")
-    #     print("🔄 Attempting training without class weights...")
-        
-    #     try:
-    #         history = model.fit(
-    #             train_gen,
-    #             validation_data=val_gen,
-    #             epochs=CONFIG['epochs'],
-    #             callbacks=callbacks,
-    #             # Remove class_weight to isolate the issue
-    #             verbose=1
-    #         )
-    #         print("✅ Training without class weights successful!")
-    #         print("⚠️ Note: Class imbalance not addressed - consider sample weights in generator")
-            
-    #     except Exception as fallback_error:
-    #         print(f"❌ Training completely failed: {fallback_error}")
-    #         print("🔍 This indicates a deeper data pipeline issue")
-    #         raise fallback_error
     
     # Plot training history
     plot_training_history(history, output_dir)

@@ -199,11 +199,14 @@ class FireDatasetGenerator(Sequence):
                 # Separate features and target
                 img = normalize_patch(patch[:, :, :9])  # First 9 bands -> becomes 12 after LULC encoding
                 mask = (patch[:, :, 9] > 0).astype(np.float32)  # Fire mask (already masked to Uttarakhand)
-                mask = np.expand_dims(mask, -1)
+                
+                # CRITICAL FIX: Convert to sparse integer labels for class_weight compatibility
+                mask = np.where(mask > 0.5, 1, 0).astype(np.int32)  # Binarize and cast to int32
+                mask = np.expand_dims(mask, -1)  # Ensure (batch, h, w, 1)
                 
                 # Ensure arrays are contiguous and proper dtype
                 img = np.ascontiguousarray(img, dtype=np.float32)
-                mask = np.ascontiguousarray(mask, dtype=np.float32)
+                mask = np.ascontiguousarray(mask, dtype=np.int32)
                 
                 # Apply augmentation only if enabled and not in debug mode
                 if self.augment_fn:
@@ -223,7 +226,7 @@ class FireDatasetGenerator(Sequence):
                 print(f"⚠️ Error loading patch: {e}")
                 # Create dummy patch with correct shape (12 channels after LULC encoding)
                 X.append(np.zeros((self.patch_size, self.patch_size, 12), dtype=np.float32))
-                Y.append(np.zeros((self.patch_size, self.patch_size, 1), dtype=np.float32))
+                Y.append(np.zeros((self.patch_size, self.patch_size, 1), dtype=np.int32))  # int32 for dummy patches too
         
         # Convert to arrays
         batch_X = np.array(X)
@@ -237,7 +240,7 @@ class FireDatasetGenerator(Sequence):
         
         # Ensure proper data types
         batch_X = batch_X.astype(np.float32)
-        batch_Y = batch_Y.astype(np.float32)
+        batch_Y = batch_Y.astype(np.int32)  # Ensure Y is int32 for class_weight compatibility
         
         # Additional debug info for first few batches
         if hasattr(self, '_debug_batch_count'):

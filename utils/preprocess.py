@@ -218,6 +218,12 @@ def normalize_patch(patch, lulc_band_idx=8, n_lulc_classes=4, nodata_value=-9999
     # Concatenate normalized bands with one-hot encoded LULC
     final_patch = np.concatenate([norm_patch, lulc_encoded], axis=-1)
     
+    # CRITICAL FIX: Final check for any remaining invalid values
+    final_patch = final_patch.astype(np.float32)
+    if np.any(~np.isfinite(final_patch)):
+        print(f"⚠️ Found non-finite values in final patch, cleaning...")
+        final_patch[~np.isfinite(final_patch)] = 0.0
+    
     return np.ascontiguousarray(final_patch, dtype=np.float32)
 
 def encode_lulc_onehot(lulc_band, n_classes=4):
