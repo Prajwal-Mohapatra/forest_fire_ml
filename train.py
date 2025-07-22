@@ -162,6 +162,7 @@ def main():
             output_shapes=(tf.TensorShape([None, CONFIG['patch_size'], CONFIG['patch_size'], 12]),  # Batched shape for X
                         tf.TensorShape([None, CONFIG['patch_size'], CONFIG['patch_size'], 1]))   # Batched shape for Y
         )
+        dataset = dataset.repeat()  # Repeat indefinitely
         dataset = dataset.prefetch(tf.data.AUTOTUNE)
         return dataset
     
@@ -248,6 +249,8 @@ def main():
         train_dataset, # Use train_dataset instead of train_gen
         validation_data=val_dataset,  # Use valdataset instead of val_gen
         epochs=CONFIG['epochs'],
+        steps_per_epoch=len(train_gen),  # e.g., 75 for train
+        validation_steps=len(val_gen),  # e.g., 18-19 for val (150/8)
         callbacks=callbacks,
         class_weight=class_weight,  # Apply class weights to handle imbalance
         verbose=2

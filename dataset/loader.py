@@ -250,11 +250,11 @@ class FireDatasetGenerator(Sequence):
         else:
             self._debug_batch_count = 1
             
-        if self._debug_batch_count <= 3:  # Debug first 3 batches
-            print(f"🔬 Batch {self._debug_batch_count} validation:")
-            print(f"   X shape: {batch_X.shape}, dtype: {batch_X.dtype}, range: [{np.min(batch_X):.3f}, {np.max(batch_X):.3f}]")
-            print(f"   Y shape: {batch_Y.shape}, dtype: {batch_Y.dtype}, range: [{np.min(batch_Y):.3f}, {np.max(batch_Y):.3f}]")
-            print(f"   Y unique values: {np.unique(batch_Y)}")
+        # if self._debug_batch_count <= 3:  # Debug first 3 batches (changed: debug every batch)
+        print(f"🔬 Batch {self._debug_batch_count} validation:")
+        print(f"   X shape: {batch_X.shape}, dtype: {batch_X.dtype}, range: [{np.min(batch_X):.3f}, {np.max(batch_X):.3f}]")
+        print(f"   Y shape: {batch_Y.shape}, dtype: {batch_Y.dtype}, range: [{np.min(batch_Y):.3f}, {np.max(batch_Y):.3f}]")
+        print(f"   Y unique values: {np.unique(batch_Y)}")
         
         return batch_X, batch_Y
 
