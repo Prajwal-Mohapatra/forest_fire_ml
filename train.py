@@ -123,7 +123,7 @@ def main():
     # Paths
     base_dir = '/kaggle/input/stacked-fire-probability-prediction-dataset/dataset_stacked'
     output_dir = '/kaggle/working/forest_fire_ml/outputs'
-    
+
     # Create output directories
     os.makedirs(f'{output_dir}/checkpoints', exist_ok=True)
     os.makedirs(f'{output_dir}/logs', exist_ok=True)
@@ -221,38 +221,38 @@ def main():
     print("Starting training...")
     
     # Try training with class weights first, fallback if errors occur
-    try:
-        print("🔥 Attempting training with class weights...")
-        history = model.fit(
-            train_gen,
-            validation_data=val_gen,
-            epochs=CONFIG['epochs'],
-            callbacks=callbacks,
-            class_weight=class_weight,  # Apply class weights to handle imbalance
-            verbose=1
-        )
-        print("✅ Training with class weights successful!")
+    # try:
+    print("🔥 Attempting training with class weights...")
+    history = model.fit(
+        train_gen,
+        validation_data=val_gen,
+        epochs=CONFIG['epochs'],
+        callbacks=callbacks,
+        class_weight=class_weight,  # Apply class weights to handle imbalance
+        verbose=2
+    )
+    print("✅ Training with class weights successful!")
         
-    except Exception as class_weight_error:
-        print(f"❌ Training with class weights failed: {class_weight_error}")
-        print("🔄 Attempting training without class weights...")
+    # except Exception as class_weight_error:
+    #     print(f"❌ Training with class weights failed: {class_weight_error}")
+    #     print("🔄 Attempting training without class weights...")
         
-        try:
-            history = model.fit(
-                train_gen,
-                validation_data=val_gen,
-                epochs=CONFIG['epochs'],
-                callbacks=callbacks,
-                # Remove class_weight to isolate the issue
-                verbose=1
-            )
-            print("✅ Training without class weights successful!")
-            print("⚠️ Note: Class imbalance not addressed - consider sample weights in generator")
+    #     try:
+    #         history = model.fit(
+    #             train_gen,
+    #             validation_data=val_gen,
+    #             epochs=CONFIG['epochs'],
+    #             callbacks=callbacks,
+    #             # Remove class_weight to isolate the issue
+    #             verbose=1
+    #         )
+    #         print("✅ Training without class weights successful!")
+    #         print("⚠️ Note: Class imbalance not addressed - consider sample weights in generator")
             
-        except Exception as fallback_error:
-            print(f"❌ Training completely failed: {fallback_error}")
-            print("🔍 This indicates a deeper data pipeline issue")
-            raise fallback_error
+    #     except Exception as fallback_error:
+    #         print(f"❌ Training completely failed: {fallback_error}")
+    #         print("🔍 This indicates a deeper data pipeline issue")
+    #         raise fallback_error
     
     # Plot training history
     plot_training_history(history, output_dir)
