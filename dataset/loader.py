@@ -70,8 +70,10 @@ class FireDatasetGenerator(Sequence):
                         # Log masking effectiveness
                         raw_fires = np.sum(fire_mask_raw > 0)
                         masked_fires = np.sum(fire_mask > 0)
-                        if day_idx == 0:  # Log only for first file to avoid spam
-                            print(f"🗺️ Geographic masking: {raw_fires} -> {masked_fires} fire pixels ({masked_fires/raw_fires*100 if raw_fires > 0 else 0:.1f}%)")
+
+                        # if day_idx == 0:  # Log only for first file to avoid spam (uncomment for viewing how many fire pixels are masked)
+                        print(f"🗺️ Geographic masking: {raw_fires} -> {masked_fires} fire pixels ({masked_fires/raw_fires*100 if raw_fires > 0 else 0:.1f}%)")
+
                     except Exception as mask_error:
                         print(f"⚠️ Failed to apply Uttarakhand masking to {tif_path}: {mask_error}")
                         fire_mask = fire_mask_raw  # Fallback to raw mask

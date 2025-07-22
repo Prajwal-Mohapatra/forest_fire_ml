@@ -69,8 +69,8 @@ def create_datasets(base_dir):
     # test_files = [f for f in all_files if '2016_05_' in f and int(f.split('_')[-1].split('.')[0]) > 15]
 
     # New Temporal split: Early April (1-20) for training, late April for validation, full May for testing
-    train_files = [f for f in all_files if '2016_04_' in f and int(f.split('_')[-1].split('.')[0]) <= 5] # change <= 20 to <= 5 for debugging
-    val_files = [f for f in all_files if '2016_04_' in f and int(f.split('_')[-1].split('.')[0]) > 25] # change > 20 to > 25 for debugging
+    train_files = [f for f in all_files if '2016_04_' in f and int(f.split('_')[-1].split('.')[0]) <= 20]
+    val_files = [f for f in all_files if '2016_04_' in f and int(f.split('_')[-1].split('.')[0]) > 20]
     test_files = [f for f in all_files if '2016_05_' in f]
 
     # # Random split: 80% training + validation, 20% testing; 80% -> 80% training & 20% validation
@@ -95,9 +95,9 @@ def main():
     # Configuration - Optimized for improved fire detection with aggressive class imbalance handling
     CONFIG = {
         'patch_size': 256,
-        'batch_size': 1,               # REDUCED for testing - was 8
-        'n_patches_per_img': 10,       # REDUCED for debugging - was 30
-        'epochs': 1,                   # REDUCED for testing - was 20
+        'batch_size': 8,              # REDUCED for testing - was 8 (debugging complete, restored to 8)
+        'n_patches_per_img': 30,      # REDUCED for debugging - was 30 (debugging complete, restored to 30)
+        'epochs': 20,                 # REDUCED for testing - was 20 (debugging complete, restored to 20)
         'learning_rate': 1e-5,        # Start with lower LR for warmup
         'max_learning_rate': 1e-4,    # Target LR after warmup
         'warmup_epochs': 5,           # Warmup epochs for LR scheduler
@@ -114,7 +114,7 @@ def main():
         'min_lr': 1e-7,               # Minimum learning rate
         'monitor_metric': 'val_dice_coef',  # Changed from val_fire_recall to balance precision/recall
 
-        'debug_mode': True,           # ENABLED for debugging - disables augmentation
+        'debug_mode': False,          # True - disables augmentation, False - enables augmentation
     }
     
     print("🔥 Starting Fire Prediction Model Training...")

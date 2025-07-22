@@ -180,8 +180,8 @@ def normalize_patch(patch, lulc_band_idx=8, n_lulc_classes=4, nodata_value=-9999
     # Now safe to cast to int32
     lulc_band = lulc_band_raw.astype(np.int32)
     
-    # Debug print to verify data integrity
-    print(f"🔬 LULC band shape: {lulc_band.shape}, dtype: {lulc_band.dtype}, range: [{np.min(lulc_band)}, {np.max(lulc_band)}]")
+    # Debug print to verify data integrity (not necessary anymore, but can be uncommented for debugging)
+    # print(f"🔬 LULC band shape: {lulc_band.shape}, dtype: {lulc_band.dtype}, range: [{np.min(lulc_band)}, {np.max(lulc_band)}]")
     other_bands = np.concatenate([patch[:, :, :lulc_band_idx], 
                                  patch[:, :, lulc_band_idx+1:]], axis=-1)
     
