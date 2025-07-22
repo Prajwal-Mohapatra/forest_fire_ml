@@ -69,8 +69,8 @@ def create_datasets(base_dir):
     # test_files = [f for f in all_files if '2016_05_' in f and int(f.split('_')[-1].split('.')[0]) > 15]
 
     # New Temporal split: Early April (1-20) for training, late April for validation, full May for testing
-    train_files = [f for f in all_files if '2016_04_' in f and int(f.split('_')[-1].split('.')[0]) <= 20]
-    val_files = [f for f in all_files if '2016_04_' in f and int(f.split('_')[-1].split('.')[0]) > 20]
+    train_files = [f for f in all_files if '2016_04_' in f and int(f.split('_')[-1].split('.')[0]) <= 5] # change <= 20 to <= 5 for debugging
+    val_files = [f for f in all_files if '2016_04_' in f and int(f.split('_')[-1].split('.')[0]) > 25] # change > 20 to > 25 for debugging
     test_files = [f for f in all_files if '2016_05_' in f]
 
     # # Random split: 80% training + validation, 20% testing; 80% -> 80% training & 20% validation
@@ -152,6 +152,21 @@ def main():
         fire_patch_ratio=CONFIG['fire_patch_ratio'],  # Add stratified sampling for validation
         augment=False  # Never augment validation data
     )
+
+    # NEW: Convert generators to tf.data.Dataset for class_weight compatibility
+    # This wraps the entire dataset from the generator
+    def generator_to_dataset(gen):
+        dataset = tf.data.Dataset.from_generator(
+            lambda: gen,
+            output_types=(tf.float32, tf.int32),
+            output_shapes=(tf.TensorShape([None, CONFIG['patch_size'], CONFIG['patch_size'], 12]),  # Batched shape for X
+                        tf.TensorShape([None, CONFIG['patch_size'], CONFIG['patch_size'], 1]))   # Batched shape for Y
+        )
+        dataset = dataset.prefetch(tf.data.AUTOTUNE)
+        return dataset
+    
+    train_dataset = generator_to_dataset(train_gen)
+    val_dataset = generator_to_dataset(val_gen)
     
     # Build model with enhanced dropout and L2 regularization
     model = build_resunet_a(
@@ -223,12 +238,15 @@ def main():
         ),
         TrainingMonitor()
     ]
+
+    # for x, y in train_dataset.take(1):
+    #     print(f"Dataset X shape: {x.shape}, Y shape: {y.shape}")
     
     # Train model with class weights - no fallback for testing
     print("🔥 Starting training with class weights...")
     history = model.fit(
-        train_gen,
-        validation_data=val_gen,
+        train_dataset, # Use train_dataset instead of train_gen
+        validation_data=val_dataset,  # Use valdataset instead of val_gen
         epochs=CONFIG['epochs'],
         callbacks=callbacks,
         class_weight=class_weight,  # Apply class weights to handle imbalance
