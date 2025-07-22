@@ -30,7 +30,7 @@ def create_uttarakhand_mask(src):
         # Return mask and dummy bounds for compatibility
         uttarakhand_bounds = {
             'method': 'shapefile',
-            'shapefile': '/home/swayam/projects/forest_fire_spread/forest_fire_ml/utils/UK_BOUNDS/Uttarakhand_Boundary.shp'
+            'shapefile': '/kaggle/working/forest_fire_ml/utils/UK_BOUNDS/Uttarakhand_Boundary.shp'
         }
         
         return uttarakhand_mask, uttarakhand_bounds
