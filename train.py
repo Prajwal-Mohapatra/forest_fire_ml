@@ -96,8 +96,8 @@ def main():
     CONFIG = {
         'patch_size': 256,
         'batch_size': 8,
-        'n_patches_per_img': 1,       # REDUCED for debugging - was 30
-        'epochs': 1,                  # REDUCED for testing - was 20
+        'n_patches_per_img': 30,       # REDUCED for debugging - was 30
+        'epochs': 20,                  # REDUCED for testing - was 20
         'learning_rate': 1e-5,        # Start with lower LR for warmup
         'max_learning_rate': 1e-4,    # Target LR after warmup
         'warmup_epochs': 5,           # Warmup epochs for LR scheduler
@@ -114,15 +114,15 @@ def main():
         'min_lr': 1e-7,               # Minimum learning rate
         'monitor_metric': 'val_dice_coef',  # Changed from val_fire_recall to balance precision/recall
 
-        'debug_mode': True,           # ENABLED for debugging - disables augmentation
+        'debug_mode': False,           # ENABLED for debugging - disables augmentation
     }
     
     print("🔥 Starting Fire Prediction Model Training...")
     print(f"Configuration: {CONFIG}")
     
     # Paths
-    base_dir = '/home/swayam/projects/forest_fire_spread/dataset'
-    output_dir = '/home/swayam/projects/forest_fire_spread/forest_fire_ml/outputs'
+    base_dir = '/kaggle/input/stacked-fire-probability-prediction-dataset/dataset_stacked'
+    output_dir = '/kaggle/working/forest_fire_ml/outputs'
     
     # Create output directories
     os.makedirs(f'{output_dir}/checkpoints', exist_ok=True)

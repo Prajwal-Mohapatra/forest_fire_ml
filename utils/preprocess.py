@@ -14,7 +14,7 @@ except ImportError:
     HAS_FIONA = False
 
 # Path to Uttarakhand shapefile
-UTTARAKHAND_SHAPEFILE = '/home/swayam/projects/forest_fire_spread/forest_fire_ml/utils/UK_BOUNDS/Uttarakhand_Boundary.shp'
+UTTARAKHAND_SHAPEFILE = '/kaggle/working/forest_fire_ml/utils/UK_BOUNDS/Uttarakhand_Boundary.shp'
 
 def create_uttarakhand_mask_from_shapefile(src_raster, shapefile_path=UTTARAKHAND_SHAPEFILE):
     """
