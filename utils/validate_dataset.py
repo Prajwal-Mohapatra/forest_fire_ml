@@ -68,8 +68,8 @@ def validate_dataset_integrity(base_dir, verbose=True):
     print("=" * 60)
     
     # Find all stacked files and masks
-    stack_files = sorted(glob.glob(os.path.join(base_dir, 'stack_2016_*.tif')))
-    mask_files = sorted(glob.glob(os.path.join(base_dir, 'fire_mask_2016_*.tif')))
+    stack_files = sorted(glob.glob(os.path.join('/home/swayam/projects/forest_fire_spread/datasets/dataset_stacked', 'stack_2016_*.tif')))
+    mask_files = sorted(glob.glob(os.path.join('/home/swayam/projects/forest_fire_spread/datasets/dataset_unstacked/fire_mask', 'fire_mask_2016_*.tif')))
     
     print(f"📁 Found {len(stack_files)} stack files")
     print(f"🔥 Found {len(mask_files)} mask files")
@@ -389,7 +389,7 @@ def main():
     Main validation function
     """
     # Configuration
-    base_dir = "/home/swayam/projects/forest_fire_spread/dataset"
+    base_dir = "/home/swayam/projects/forest_fire_spread/datasets/dataset_stacked/"
     
     # Check if directory exists
     if not os.path.exists(base_dir):
