@@ -96,8 +96,8 @@ def main():
     CONFIG = {
         'patch_size': 256,
         'batch_size': 8,
-        'n_patches_per_img': 30,      # Increased from 25 for more diversity
-        'epochs': 20,                 # Increased from 10 for better learning
+        'n_patches_per_img': 1,       # REDUCED for debugging - was 30
+        'epochs': 1,                  # REDUCED for testing - was 20
         'learning_rate': 1e-5,        # Start with lower LR for warmup
         'max_learning_rate': 1e-4,    # Target LR after warmup
         'warmup_epochs': 5,           # Warmup epochs for LR scheduler
@@ -114,15 +114,15 @@ def main():
         'min_lr': 1e-7,               # Minimum learning rate
         'monitor_metric': 'val_dice_coef',  # Changed from val_fire_recall to balance precision/recall
 
-        'debug_mode': False,          # Set to True to disable all augmentation
+        'debug_mode': True,           # ENABLED for debugging - disables augmentation
     }
     
     print("🔥 Starting Fire Prediction Model Training...")
     print(f"Configuration: {CONFIG}")
     
     # Paths
-    base_dir = '/kaggle/input/stacked-fire-probability-prediction-dataset/dataset_stacked'
-    output_dir = '/kaggle/working/forest_fire_ml/outputs'
+    base_dir = '/home/swayam/projects/forest_fire_spread/dataset'
+    output_dir = '/home/swayam/projects/forest_fire_spread/forest_fire_ml/outputs'
     
     # Create output directories
     os.makedirs(f'{output_dir}/checkpoints', exist_ok=True)
@@ -171,12 +171,12 @@ def main():
         metrics=[iou_score, dice_coef, fire_recall, fire_precision]
     )
     
-    # Add class weights to handle severe class imbalance
-    class_weight = {0: 1, 1: 50}  # Give 50x more weight to fire pixels during training
+    # CRITICAL FIX: Class weights with float values to avoid type issues
+    class_weight = {0: 1.0, 1: 50.0}  # Use floats to prevent scalar conversion errors
     
     print("Model compiled successfully!")
     print(f"Model parameters: {model.count_params():,}")
-    print(f"Class weights applied: {class_weight}")
+    print(f"Class weights applied: {class_weight} (type: {type(class_weight[0])}, {type(class_weight[1])})")
     
     # Callbacks
     callbacks = [
@@ -217,16 +217,42 @@ def main():
         TrainingMonitor()
     ]
     
-    # Train model
+    # Train model with enhanced error handling and debugging
     print("Starting training...")
-    history = model.fit(
-        train_gen,
-        validation_data=val_gen,
-        epochs=CONFIG['epochs'],
-        callbacks=callbacks,
-        class_weight=class_weight,  # Apply class weights to handle imbalance
-        verbose=1
-    )
+    
+    # Try training with class weights first, fallback if errors occur
+    try:
+        print("🔥 Attempting training with class weights...")
+        history = model.fit(
+            train_gen,
+            validation_data=val_gen,
+            epochs=CONFIG['epochs'],
+            callbacks=callbacks,
+            class_weight=class_weight,  # Apply class weights to handle imbalance
+            verbose=1
+        )
+        print("✅ Training with class weights successful!")
+        
+    except Exception as class_weight_error:
+        print(f"❌ Training with class weights failed: {class_weight_error}")
+        print("🔄 Attempting training without class weights...")
+        
+        try:
+            history = model.fit(
+                train_gen,
+                validation_data=val_gen,
+                epochs=CONFIG['epochs'],
+                callbacks=callbacks,
+                # Remove class_weight to isolate the issue
+                verbose=1
+            )
+            print("✅ Training without class weights successful!")
+            print("⚠️ Note: Class imbalance not addressed - consider sample weights in generator")
+            
+        except Exception as fallback_error:
+            print(f"❌ Training completely failed: {fallback_error}")
+            print("🔍 This indicates a deeper data pipeline issue")
+            raise fallback_error
     
     # Plot training history
     plot_training_history(history, output_dir)

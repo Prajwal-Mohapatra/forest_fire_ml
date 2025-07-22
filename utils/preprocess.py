@@ -14,7 +14,7 @@ except ImportError:
     HAS_FIONA = False
 
 # Path to Uttarakhand shapefile
-UTTARAKHAND_SHAPEFILE = '/kaggle/working/forest_fire_ml/utils/UK_BOUNDS/Uttarakhand_Boundary.shp'
+UTTARAKHAND_SHAPEFILE = '/home/swayam/projects/forest_fire_spread/forest_fire_ml/utils/UK_BOUNDS/Uttarakhand_Boundary.shp'
 
 def create_uttarakhand_mask_from_shapefile(src_raster, shapefile_path=UTTARAKHAND_SHAPEFILE):
     """
@@ -158,13 +158,30 @@ def normalize_patch(patch, lulc_band_idx=8, n_lulc_classes=4, nodata_value=-9999
     # Ensure input is float32 and contiguous
     patch = np.ascontiguousarray(patch, dtype=np.float32)
     
-    # Handle nodata values by masking them
-    nodata_mask = (patch == nodata_value) | np.isnan(patch) | np.isinf(patch) | (patch < -1e6)
-    patch[nodata_mask] = np.nan
+    # CRITICAL FIX: Handle all invalid values BEFORE any casting operations
+    patch = np.nan_to_num(patch, nan=0, posinf=0, neginf=0)  # Replace NaN/inf with 0
     
-    # Separate LULC band for one-hot encoding
-    lulc_band = patch[:, :, lulc_band_idx].astype(np.int32)
-    lulc_band = np.nan_to_num(lulc_band, nan=0)  # Set nodata LULC to class 0
+    # Replace nodata values with 0 for safe processing
+    patch = np.where(patch == nodata_value, 0, patch)
+    
+    # Ensure patch is finite and valid
+    patch = np.where(np.isfinite(patch), patch, 0)
+    
+    # Handle nodata values by masking them AFTER cleaning
+    nodata_mask = (patch == nodata_value) | np.isnan(patch) | np.isinf(patch) | (patch < -1e6)
+    
+    # Separate LULC band for one-hot encoding - now safe to cast
+    lulc_band_raw = patch[:, :, lulc_band_idx]
+    
+    # Additional safety: ensure LULC band is clean before casting
+    lulc_band_raw = np.nan_to_num(lulc_band_raw, nan=0, posinf=0, neginf=0)
+    lulc_band_raw = np.where(np.isfinite(lulc_band_raw), lulc_band_raw, 0)
+    
+    # Now safe to cast to int32
+    lulc_band = lulc_band_raw.astype(np.int32)
+    
+    # Debug print to verify data integrity
+    print(f"🔬 LULC band shape: {lulc_band.shape}, dtype: {lulc_band.dtype}, range: [{np.min(lulc_band)}, {np.max(lulc_band)}]")
     other_bands = np.concatenate([patch[:, :, :lulc_band_idx], 
                                  patch[:, :, lulc_band_idx+1:]], axis=-1)
     

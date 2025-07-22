@@ -225,7 +225,33 @@ class FireDatasetGenerator(Sequence):
                 X.append(np.zeros((self.patch_size, self.patch_size, 12), dtype=np.float32))
                 Y.append(np.zeros((self.patch_size, self.patch_size, 1), dtype=np.float32))
         
-        return np.array(X), np.array(Y)
+        # Convert to arrays
+        batch_X = np.array(X)
+        batch_Y = np.array(Y)
+        
+        # CRITICAL FIX: Batch-level validation to catch invalid values early
+        assert not np.any(np.isnan(batch_X)), f"NaN values detected in batch_X! Shape: {batch_X.shape}"
+        assert not np.any(np.isnan(batch_Y)), f"NaN values detected in batch_Y! Shape: {batch_Y.shape}"
+        assert not np.any(np.isinf(batch_X)), f"Inf values detected in batch_X! Shape: {batch_X.shape}"
+        assert not np.any(np.isinf(batch_Y)), f"Inf values detected in batch_Y! Shape: {batch_Y.shape}"
+        
+        # Ensure proper data types
+        batch_X = batch_X.astype(np.float32)
+        batch_Y = batch_Y.astype(np.float32)
+        
+        # Additional debug info for first few batches
+        if hasattr(self, '_debug_batch_count'):
+            self._debug_batch_count += 1
+        else:
+            self._debug_batch_count = 1
+            
+        if self._debug_batch_count <= 3:  # Debug first 3 batches
+            print(f"🔬 Batch {self._debug_batch_count} validation:")
+            print(f"   X shape: {batch_X.shape}, dtype: {batch_X.dtype}, range: [{np.min(batch_X):.3f}, {np.max(batch_X):.3f}]")
+            print(f"   Y shape: {batch_Y.shape}, dtype: {batch_Y.dtype}, range: [{np.min(batch_Y):.3f}, {np.max(batch_Y):.3f}]")
+            print(f"   Y unique values: {np.unique(batch_Y)}")
+        
+        return batch_X, batch_Y
 
     def on_epoch_end(self):
         """Shuffle samples at end of epoch"""
