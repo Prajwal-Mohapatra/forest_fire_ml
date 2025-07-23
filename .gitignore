@@ -106,6 +106,7 @@ predictions_*.tiff
 large_predictions/
 *success*/
 *success_*.zip
+*failed*/
 
 # =============================================================================
 # LOGS & MONITORING

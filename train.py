@@ -69,8 +69,8 @@ def create_datasets(base_dir):
     # test_files = [f for f in all_files if '2016_05_' in f and int(f.split('_')[-1].split('.')[0]) > 15]
 
     # New Temporal split: Early April (1-20) for training, late April for validation, full May for testing
-    train_files = [f for f in all_files if '2016_04_' in f and int(f.split('_')[-1].split('.')[0]) <= 20]
-    val_files = [f for f in all_files if '2016_04_' in f and int(f.split('_')[-1].split('.')[0]) > 20]
+    train_files = [f for f in all_files if '2016_04_' in f and int(f.split('_')[-1].split('.')[0]) <= 10] # Reduced from <= 20 to <= 10 for debugging
+    val_files = [f for f in all_files if '2016_04_' in f and int(f.split('_')[-1].split('.')[0]) > 25] # Reduced from > 20 to > 25 for debugging
     test_files = [f for f in all_files if '2016_05_' in f]
 
     # # Random split: 80% training + validation, 20% testing; 80% -> 80% training & 20% validation
@@ -246,13 +246,13 @@ def main():
     # Train model with class weights - no fallback for testing
     print("🔥 Starting training with class weights...")
     history = model.fit(
-        train_dataset, # Use train_dataset instead of train_gen
-        validation_data=val_dataset,  # Use valdataset instead of val_gen
+        train_gen, # Use train_dataset instead of train_gen
+        validation_data=val_gen,  # Use valdataset instead of val_gen
         epochs=CONFIG['epochs'],
         steps_per_epoch=len(train_gen),  # e.g., 75 for train
         validation_steps=len(val_gen),  # e.g., 18-19 for val (150/8)
         callbacks=callbacks,
-        class_weight=class_weight,  # Apply class weights to handle imbalance
+        # class_weight=class_weight,  # Apply class weights to handle imbalance
         verbose=2
     )
     print("✅ Training with class weights successful!")
