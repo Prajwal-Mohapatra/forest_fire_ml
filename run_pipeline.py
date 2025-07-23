@@ -75,7 +75,7 @@ def run_prediction(model_path, input_tif, output_path):
             input_tif_path=input_tif,
             output_dir=output_dir,
             threshold=0.4,  # Use optimized threshold
-            patch_size=128,  # Reduced from 256 to 128 for memory efficiency
+            patch_size=256,  # Reduced to 256 for memory efficiency
             overlap=32       # Reduced from 64 to 32 for memory efficiency
         )
         
@@ -96,7 +96,7 @@ def run_prediction(model_path, input_tif, output_path):
             input_tif_path=input_tif,
             output_dir=output_dir,
             threshold=0.4,  # Use optimized threshold
-            patch_size=128,  # Reduced from 256 to 128 for memory efficiency
+            patch_size=256,  # Reduced to 256 for memory efficiency
             overlap=32       # Reduced from 64 to 32 for memory efficiency
         )
         

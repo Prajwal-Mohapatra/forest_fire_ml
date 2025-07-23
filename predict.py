@@ -80,7 +80,7 @@ custom_objects = {
     }
 
 def predict_fire_probability(model_path, input_tif_path, output_dir, 
-                           patch_size=128, overlap=32, threshold=0.4,
+                           patch_size=256, overlap=32, threshold=0.4,
                            save_probability=True, save_binary=True):
     """
     Predict fire probability for entire region using sliding window approach with memory optimization
@@ -89,7 +89,7 @@ def predict_fire_probability(model_path, input_tif_path, output_dir,
         model_path: Path to trained model
         input_tif_path: Path to input satellite image
         output_dir: Directory to save outputs
-        patch_size: Size of patches for prediction (reduced to 128 for memory efficiency)
+        patch_size: Size of patches for prediction (reduced to 256 for memory efficiency)
         overlap: Overlap between patches (reduced to 32 for memory efficiency)
         threshold: Threshold for binary classification (0-1) - Updated default to 0.3
         save_probability: Whether to save probability map
@@ -333,12 +333,12 @@ def predict_with_confidence_zones(input_tif_path, output_dir, results=None):
     return confidence_map
 
 def predict_fire_nextday(model_path, input_tif_path, output_dir, 
-                        threshold=0.4, patch_size=128, overlap=32):
+                        threshold=0.4, patch_size=256, overlap=32):
     """
     Main function to predict fire/no-fire for next day
     Returns binary raster map at 30m resolution
     Updated default threshold to 0.3 for better precision/recall balance
-    Updated patch_size to 128 and overlap to 32 for memory efficiency
+    Updated patch_size to 256 and overlap to 32 for memory efficiency
     """
     
     print("🔥 FIRE PREDICTION FOR NEXT DAY")
@@ -409,7 +409,7 @@ def predict_fire_map(input_path, model_path=None, output_dir="outputs", **kwargs
         input_tif_path=input_path,
         output_dir=output_dir,
         threshold=kwargs.get('threshold', 0.4),  # Updated default threshold from 0.3 to 0.4
-        patch_size=kwargs.get('patch_size', 128),  # Reduced from 256 to 128 for memory efficiency
+        patch_size=kwargs.get('patch_size', 256),  # Reduced from 256 to 256 for memory efficiency
         overlap=kwargs.get('overlap', 32)  # Reduced from 64 to 32 for memory efficiency
     )
 
