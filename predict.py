@@ -158,7 +158,7 @@ def predict_fire_probability(model_path, input_tif_path, output_dir,
                     patch = np.expand_dims(patch, axis=0)
                     
                     try:
-                        pred_patch = model.predict(patch, verbose=1)[0, :, :, 0]  # Silent predict
+                        pred_patch = model.predict(patch, verbose=0)[0, :, :, 0]  # Silent predict
                         
                         # Apply Uttarakhand mask to prediction results
                         # Set predictions outside Uttarakhand boundaries to 0
