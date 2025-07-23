@@ -7,6 +7,16 @@ import sys
 import glob
 import argparse
 from datetime import datetime
+import tensorflow as tf
+
+# Enable TensorFlow GPU Memory Growth
+gpus = tf.config.list_physical_devices('GPU')
+if gpus:
+    try:
+        for gpu in gpus:
+            tf.config.experimental.set_memory_growth(gpu, True)
+    except RuntimeError as e:
+        print(e)
 
 def setup_environment():
     """Setup directories and environment"""
@@ -65,8 +75,8 @@ def run_prediction(model_path, input_tif, output_path):
             input_tif_path=input_tif,
             output_dir=output_dir,
             threshold=0.4,  # Use optimized threshold
-            patch_size=256,
-            overlap=64
+            patch_size=128,  # Reduced from 256 to 128 for memory efficiency
+            overlap=32       # Reduced from 64 to 32 for memory efficiency
         )
         
         # Use the binary map for visualization
@@ -86,8 +96,8 @@ def run_prediction(model_path, input_tif, output_path):
             input_tif_path=input_tif,
             output_dir=output_dir,
             threshold=0.4,  # Use optimized threshold
-            patch_size=256,
-            overlap=64
+            patch_size=128,  # Reduced from 256 to 128 for memory efficiency
+            overlap=32       # Reduced from 64 to 32 for memory efficiency
         )
         
         # Visualize results - use binary map if available, otherwise the specified output path

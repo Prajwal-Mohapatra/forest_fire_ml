@@ -9,6 +9,15 @@ import sys
 import numpy as np
 import tensorflow as tf
 
+# Enable TensorFlow GPU Memory Growth
+gpus = tf.config.list_physical_devices('GPU')
+if gpus:
+    try:
+        for gpu in gpus:
+            tf.config.experimental.set_memory_growth(gpu, True)
+    except RuntimeError as e:
+        print(e)
+
 # Add the current directory to path to import modules
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 

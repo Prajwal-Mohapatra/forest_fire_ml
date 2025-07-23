@@ -10,6 +10,15 @@ import tensorflow as tf
 import keras
 import keras.backend as K
 
+# Enable TensorFlow GPU Memory Growth
+gpus = tf.config.list_physical_devices('GPU')
+if gpus:
+    try:
+        for gpu in gpus:
+            tf.config.experimental.set_memory_growth(gpu, True)
+    except RuntimeError as e:
+        print(e)
+
 @keras.saving.register_keras_serializable()
 def iou_score(y_true, y_pred, threshold=0.4, smooth=1e-6):
     """Intersection over Union metric for binary segmentation with configurable threshold"""
@@ -161,6 +170,9 @@ def evaluate_model(model_path, test_files, output_dir='outputs'):
         print(f"❌ Prediction generation failed: {str(e)}")
         import traceback
         traceback.print_exc()
+    
+    # Clear TensorFlow session to release resources
+    tf.keras.backend.clear_session()
     
     return results
 

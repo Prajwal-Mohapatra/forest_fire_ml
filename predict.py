@@ -12,6 +12,15 @@ import tensorflow as tf
 import keras
 import keras.backend as K
 
+# Enable TensorFlow GPU Memory Growth
+gpus = tf.config.list_physical_devices('GPU')
+if gpus:
+    try:
+        for gpu in gpus:
+            tf.config.experimental.set_memory_growth(gpu, True)
+    except RuntimeError as e:
+        print(e)
+
 @keras.saving.register_keras_serializable()
 def iou_score(y_true, y_pred, threshold=0.4, smooth=1e-6):
     """Intersection over Union metric for binary segmentation with configurable threshold"""
@@ -71,17 +80,17 @@ custom_objects = {
     }
 
 def predict_fire_probability(model_path, input_tif_path, output_dir, 
-                           patch_size=256, overlap=64, threshold=0.4,
+                           patch_size=128, overlap=32, threshold=0.4,
                            save_probability=True, save_binary=True):
     """
-    Predict fire probability for entire region using sliding window approach
+    Predict fire probability for entire region using sliding window approach with memory optimization
     
     Args:
         model_path: Path to trained model
         input_tif_path: Path to input satellite image
         output_dir: Directory to save outputs
-        patch_size: Size of patches for prediction
-        overlap: Overlap between patches
+        patch_size: Size of patches for prediction (reduced to 128 for memory efficiency)
+        overlap: Overlap between patches (reduced to 32 for memory efficiency)
         threshold: Threshold for binary classification (0-1) - Updated default to 0.3
         save_probability: Whether to save probability map
         save_binary: Whether to save binary fire/no-fire map
@@ -93,65 +102,54 @@ def predict_fire_probability(model_path, input_tif_path, output_dir,
     # Load model
     model = keras.models.load_model(model_path, custom_objects=custom_objects)
     
-    # Read input image
-    try:
-        with rasterio.open(input_tif_path) as src:
-            profile = src.profile
-            img_data = src.read().astype(np.float32)
-            crs = src.crs
-            transform = src.transform
-        print(f"✅ Input image loaded: {img_data.shape}")
+    from rasterio.windows import Window
+    # Get image metadata without loading data
+    with rasterio.open(input_tif_path) as src:
+        profile = src.profile
+        crs = src.crs
+        transform = src.transform
+        h, w = src.height, src.width
+        print(f"✅ Input image metadata loaded: {h}x{w}")
         print(f"   CRS: {crs}")
         print(f"   Transform: {transform}")
-    except Exception as e:
-        print(f"❌ Failed to read input image: {str(e)}")
-        raise e
-    
-    # Prepare data with 12-channel output after LULC encoding
-    img_data = np.moveaxis(img_data, 0, -1)  # (H, W, C)
-    features = normalize_patch(img_data[:, :, :9])  # First 9 bands -> becomes 12 channels
-    
-    h, w = features.shape[:2]
-    print(f"📊 Processing image of size: {h}x{w}, channels: {features.shape[2]}")
-    
-    # Initialize prediction array
-    prediction = np.zeros((h, w), dtype=np.float32)
-    count_map = np.zeros((h, w), dtype=np.float32)
-    
-    # Sliding window prediction
-    stride = patch_size - overlap
-    
-    # Calculate number of patches
-    n_patches_y = (h - patch_size) // stride + 1
-    n_patches_x = (w - patch_size) // stride + 1
-    total_patches = n_patches_y * n_patches_x
-    
-    print(f"🔍 Processing {total_patches} patches ({n_patches_y}x{n_patches_x})")
-    
-    patch_count = 0
-    for y in range(0, h - patch_size + 1, stride):
-        for x in range(0, w - patch_size + 1, stride):
-            # Extract patch
-            patch = features[y:y+patch_size, x:x+patch_size, :]
-            patch = np.expand_dims(patch, axis=0)  # Add batch dimension
-            
-            # Predict
-            try:
-                pred_patch = model.predict(patch, verbose=1)[0, :, :, 0]
-            except Exception as e:
-                print(f"❌ Prediction failed for patch at ({y}, {x}): {str(e)}")
-                continue
-            
-            # Add to prediction map
-            prediction[y:y+patch_size, x:x+patch_size] += pred_patch
-            count_map[y:y+patch_size, x:x+patch_size] += 1
-            
-            patch_count += 1
-            if patch_count % 100 == 0:
-                print(f"📈 Processed {patch_count}/{total_patches} patches")
-    
-    # Average overlapping predictions
-    prediction = np.divide(prediction, count_map, out=np.zeros_like(prediction), where=count_map!=0)
+
+    # Initialize full prediction arrays (use float16 to halve memory)
+    prediction = np.zeros((h, w), dtype=np.float16)
+    count_map = np.zeros((h, w), dtype=np.uint8)  # Smaller dtype
+
+    # Process in windows (e.g., 2048x2048 chunks, adjust based on RAM)
+    window_size = 2048
+    for y in range(0, h, window_size):
+        for x in range(0, w, window_size):
+            win_h = min(window_size, h - y)
+            win_w = min(window_size, w - x)
+            window = Window(x, y, win_w, win_h)
+
+            # Read only the window
+            with rasterio.open(input_tif_path) as src:
+                img_data = src.read(window=window).astype(np.float32)
+                img_data = np.moveaxis(img_data, 0, -1)  # (win_h, win_w, 10)
+
+            # Normalize only this window (from preprocess.py)
+            features = normalize_patch(img_data[:, :, :9])  # Output: (win_h, win_w, 12)
+
+            # Predict on patches within this window
+            stride = patch_size - overlap
+            for py in range(0, win_h - patch_size + 1, stride):
+                for px in range(0, win_w - patch_size + 1, stride):
+                    patch = features[py:py+patch_size, px:px+patch_size, :]
+                    patch = np.expand_dims(patch, axis=0)
+                    
+                    try:
+                        pred_patch = model.predict(patch, verbose=0)[0, :, :, 0]  # Silent predict
+                        prediction[y+py:y+py+patch_size, x+px:x+px+patch_size] += pred_patch
+                        count_map[y+py:y+py+patch_size, x+px:x+px+patch_size] += 1
+                    except Exception as e:
+                        print(f"❌ Prediction failed for patch at ({y+py}, {x+px}): {str(e)}")
+                        continue
+
+    # Average predictions (handle divisions carefully)
+    prediction = np.divide(prediction, count_map, where=count_map != 0).astype(np.float32)
     
     print(f"📊 Prediction statistics:")
     print(f"  - Min: {prediction.min():.4f}")
@@ -254,6 +252,9 @@ def predict_fire_probability(model_path, input_tif_path, output_dir,
     except Exception as e:
         print(f"❌ Failed to save metadata: {str(e)}")
     
+    # Clear TensorFlow session to release resources
+    tf.keras.backend.clear_session()
+    
     return {
         'probability_map': prediction,
         'binary_map': binary_prediction,
@@ -332,11 +333,12 @@ def predict_with_confidence_zones(input_tif_path, output_dir, results=None):
     return confidence_map
 
 def predict_fire_nextday(model_path, input_tif_path, output_dir, 
-                        threshold=0.4, patch_size=256, overlap=64):
+                        threshold=0.4, patch_size=128, overlap=32):
     """
     Main function to predict fire/no-fire for next day
     Returns binary raster map at 30m resolution
     Updated default threshold to 0.3 for better precision/recall balance
+    Updated patch_size to 128 and overlap to 32 for memory efficiency
     """
     
     print("🔥 FIRE PREDICTION FOR NEXT DAY")
@@ -407,8 +409,8 @@ def predict_fire_map(input_path, model_path=None, output_dir="outputs", **kwargs
         input_tif_path=input_path,
         output_dir=output_dir,
         threshold=kwargs.get('threshold', 0.4),  # Updated default threshold from 0.3 to 0.4
-        patch_size=kwargs.get('patch_size', 256),
-        overlap=kwargs.get('overlap', 64)
+        patch_size=kwargs.get('patch_size', 128),  # Reduced from 256 to 128 for memory efficiency
+        overlap=kwargs.get('overlap', 32)  # Reduced from 64 to 32 for memory efficiency
     )
 
 # Test and example usage

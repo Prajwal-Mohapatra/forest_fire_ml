@@ -4,7 +4,7 @@ Session (57m, 12 hours)
 
 Disk (2.5GiB, Max 57.6GiB)
 
-CPU (CPU: 119.00%, RAM: 14.6GiB, Max 29GiB)
+CPU (CPU: 119.00%, RAM: 21.6GiB, Max 29GiB)
 
 GPU (GPU: 100.00%, GPU Memory: 13.7GiB, Max 15GiB)
 
