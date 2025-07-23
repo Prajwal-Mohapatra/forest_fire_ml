@@ -6,6 +6,7 @@ import rasterio
 from keras.utils import Sequence
 from datetime import datetime, timedelta
 import albumentations as A
+import time
 from utils.preprocess import normalize_patch, get_fire_focused_coordinates, create_uttarakhand_mask_from_shapefile, apply_geographic_masking_to_patch
 
 class FireDatasetGenerator(Sequence):
@@ -44,6 +45,8 @@ class FireDatasetGenerator(Sequence):
                 A.GaussNoise(noise_scale_factor=0.1, p=0.2),  # Fixed: noise_scale_factor instead of var_limit
             ])
         
+        self.mask_cache = {}  # Cache for full Uttarakhand masks per TIFF path
+        
         # Pre-compute patch coordinates for each day
         self.samples = self._generate_temporal_patches()
         self.on_epoch_end()
@@ -64,7 +67,10 @@ class FireDatasetGenerator(Sequence):
                     
                     # Apply Uttarakhand masking to the full image fire mask
                     try:
+                        start_time = time.time()
                         uttarakhand_mask_full = create_uttarakhand_mask_from_shapefile(src)
+                        print(f"Mask creation time: {time.time() - start_time:.2f} seconds")
+                        self.mask_cache[tif_path] = uttarakhand_mask_full  # Cache the full mask
                         fire_mask = fire_mask_raw * uttarakhand_mask_full  # Apply geographic masking
                         
                         # Log masking effectiveness
@@ -169,8 +175,14 @@ class FireDatasetGenerator(Sequence):
                 
                     # Create Uttarakhand mask for this patch - use shapefile-based masking
                     try:
-                        # For patch-level masking, we need to create a subset of the full mask
-                        uttarakhand_mask_full = create_uttarakhand_mask_from_shapefile(src)
+                        start_time = time.time()
+                        # Retrieve from cache instead of recomputing
+                        uttarakhand_mask_full = self.mask_cache.get(sample['tif_path'])
+                        if uttarakhand_mask_full is None:
+                            # Fallback if not cached (rare)
+                            uttarakhand_mask_full = create_uttarakhand_mask_from_shapefile(src)
+                            self.mask_cache[sample['tif_path']] = uttarakhand_mask_full
+                        
                         # Extract patch-sized mask from full mask
                         uttarakhand_mask_patch = uttarakhand_mask_full[y:y+self.patch_size, x:x+self.patch_size]
                         
@@ -181,6 +193,7 @@ class FireDatasetGenerator(Sequence):
                             actual_h, actual_w = uttarakhand_mask_patch.shape
                             patch_mask_padded[:actual_h, :actual_w] = uttarakhand_mask_patch
                             uttarakhand_mask_patch = patch_mask_padded
+                        print(f"Mask retrieval/extraction time: {time.time() - start_time:.2f} seconds")
                             
                     except Exception as mask_error:
                         print(f"⚠️ Failed to create Uttarakhand mask for patch: {mask_error}")
