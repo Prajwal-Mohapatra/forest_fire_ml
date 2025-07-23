@@ -292,14 +292,7 @@ def predict_fire_probability(model_path, input_tif_path, output_dir,
     return {
         'probability_map': prediction,
         'binary_map': binary_prediction,
-        'metadata': {
-            'input_file': input_tif_path,
-            'fire_percentage_uttarakhand': fire_percentage_uttarakhand,
-            'fire_percentage_total': fire_percentage_total,
-            'output_dir': output_dir,
-            'model_file': model_path,
-            'timestamp': metadata['timestamp']
-        }
+        'metadata': metadata,
     }
 
 def predict_with_confidence_zones(input_tif_path, output_dir, results=None):
