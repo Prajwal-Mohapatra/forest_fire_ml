@@ -69,8 +69,8 @@ def create_datasets(base_dir):
     # test_files = [f for f in all_files if '2016_05_' in f and int(f.split('_')[-1].split('.')[0]) > 15]
 
     # New Temporal split: Early April (1-20) for training, late April for validation, full May for testing
-    train_files = [f for f in all_files if '2016_04_' in f and int(f.split('_')[-1].split('.')[0]) <= 10] # Reduced from <= 20 to <= 10 for debugging
-    val_files = [f for f in all_files if '2016_04_' in f and int(f.split('_')[-1].split('.')[0]) > 25] # Reduced from > 20 to > 25 for debugging
+    train_files = [f for f in all_files if '2016_04_' in f and int(f.split('_')[-1].split('.')[0]) <= 20]
+    val_files = [f for f in all_files if '2016_04_' in f and int(f.split('_')[-1].split('.')[0]) > 20]
     test_files = [f for f in all_files if '2016_05_' in f]
 
     # # Random split: 80% training + validation, 20% testing; 80% -> 80% training & 20% validation
@@ -195,11 +195,11 @@ def main():
     print(f"Class weights applied: {class_weight} (type: {type(class_weight[0])}, {type(class_weight[1])})")
     
     # CRITICAL FIX: Debug print to verify Y shape and type before training
-    print("🔬 Verifying data generator output...")
-    x_sample, y_sample = next(iter(train_gen))
-    print(f"Y sample shape: {y_sample.shape}, dtype: {y_sample.dtype}, unique: {np.unique(y_sample)}")
-    print(f"X sample shape: {x_sample.shape}, dtype: {x_sample.dtype}")
-    print(f"Y value range: [{np.min(y_sample)}, {np.max(y_sample)}]")
+    # print("🔬 Verifying data generator output...")
+    # x_sample, y_sample = next(iter(train_gen))
+    # print(f"Y sample shape: {y_sample.shape}, dtype: {y_sample.dtype}, unique: {np.unique(y_sample)}")
+    # print(f"X sample shape: {x_sample.shape}, dtype: {x_sample.dtype}")
+    # print(f"Y value range: [{np.min(y_sample)}, {np.max(y_sample)}]")
     
     # Callbacks
     callbacks = [
@@ -253,7 +253,7 @@ def main():
         validation_steps=len(val_gen),  # e.g., 18-19 for val (150/8)
         callbacks=callbacks,
         # class_weight=class_weight,  # Apply class weights to handle imbalance
-        verbose=2
+        verbose=1 # 1 -> Progress bar, 2 -> One line per epoch
     )
     print("✅ Training with class weights successful!")
     
