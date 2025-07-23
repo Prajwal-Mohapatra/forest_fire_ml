@@ -117,8 +117,8 @@ def predict_fire_probability(model_path, input_tif_path, output_dir,
     prediction = np.zeros((h, w), dtype=np.float16)
     count_map = np.zeros((h, w), dtype=np.uint8)  # Smaller dtype
 
-    # Process in windows (e.g., 2048x2048 chunks, adjust based on RAM)
-    window_size = 2048
+    # Process in windows (e.g., 4096x4096 chunks, adjust based on RAM)
+    window_size = 4096
     for y in range(0, h, window_size):
         for x in range(0, w, window_size):
             win_h = min(window_size, h - y)
@@ -141,7 +141,7 @@ def predict_fire_probability(model_path, input_tif_path, output_dir,
                     patch = np.expand_dims(patch, axis=0)
                     
                     try:
-                        pred_patch = model.predict(patch, verbose=0)[0, :, :, 0]  # Silent predict
+                        pred_patch = model.predict(patch, verbose=1)[0, :, :, 0]  # Silent predict
                         prediction[y+py:y+py+patch_size, x+px:x+px+patch_size] += pred_patch
                         count_map[y+py:y+py+patch_size, x+px:x+px+patch_size] += 1
                     except Exception as e:
