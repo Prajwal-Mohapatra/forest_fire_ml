@@ -6,7 +6,7 @@ import keras
 import os
 
 from utils.metrics import focal_loss, iou_score, dice_coef
-from utils.preprocess import normalize_patch
+from utils.preprocess import normalize_patch, create_uttarakhand_mask_from_shapefile
 
 import tensorflow as tf
 import keras
@@ -112,6 +112,11 @@ def predict_fire_probability(model_path, input_tif_path, output_dir,
         print(f"✅ Input image metadata loaded: {h}x{w}")
         print(f"   CRS: {crs}")
         print(f"   Transform: {transform}")
+        
+        # Create Uttarakhand boundary mask for geographic constraints
+        print("🗺️ Creating Uttarakhand boundary mask...")
+        uttarakhand_mask = create_uttarakhand_mask_from_shapefile(src)
+        print(f"✅ Uttarakhand mask created: {np.sum(uttarakhand_mask):,} valid pixels out of {uttarakhand_mask.size:,}")
 
     # Initialize full prediction arrays (use float16 to halve memory)
     prediction = np.zeros((h, w), dtype=np.float16)
@@ -137,21 +142,42 @@ def predict_fire_probability(model_path, input_tif_path, output_dir,
             stride = patch_size - overlap
             for py in range(0, win_h - patch_size + 1, stride):
                 for px in range(0, win_w - patch_size + 1, stride):
+                    # Get global coordinates for this patch
+                    global_y = y + py
+                    global_x = x + px
+                    
+                    # Extract Uttarakhand mask for this patch area
+                    mask_patch = uttarakhand_mask[global_y:global_y+patch_size, global_x:global_x+patch_size]
+                    
+                    # Skip patches that are entirely outside Uttarakhand (less than 10% valid pixels)
+                    valid_pixel_ratio = np.mean(mask_patch) if mask_patch.size > 0 else 0
+                    if valid_pixel_ratio < 0.1:
+                        continue
+                    
                     patch = features[py:py+patch_size, px:px+patch_size, :]
                     patch = np.expand_dims(patch, axis=0)
                     
                     try:
                         pred_patch = model.predict(patch, verbose=1)[0, :, :, 0]  # Silent predict
-                        prediction[y+py:y+py+patch_size, x+px:x+px+patch_size] += pred_patch
-                        count_map[y+py:y+py+patch_size, x+px:x+px+patch_size] += 1
+                        
+                        # Apply Uttarakhand mask to prediction results
+                        # Set predictions outside Uttarakhand boundaries to 0
+                        pred_patch_masked = pred_patch * mask_patch
+                        
+                        prediction[global_y:global_y+patch_size, global_x:global_x+patch_size] += pred_patch_masked
+                        # Only count pixels within Uttarakhand for averaging
+                        count_map[global_y:global_y+patch_size, global_x:global_x+patch_size] += mask_patch.astype(np.uint8)
                     except Exception as e:
-                        print(f"❌ Prediction failed for patch at ({y+py}, {x+px}): {str(e)}")
+                        print(f"❌ Prediction failed for patch at ({global_y}, {global_x}): {str(e)}")
                         continue
 
     # Average predictions (handle divisions carefully)
     prediction = np.divide(prediction, count_map, where=count_map != 0).astype(np.float32)
     
-    print(f"📊 Prediction statistics:")
+    # Apply final Uttarakhand mask to ensure no predictions outside boundaries
+    prediction = prediction * uttarakhand_mask
+    
+    print(f"📊 Prediction statistics (Uttarakhand region only):")
     print(f"  - Min: {prediction.min():.4f}")
     print(f"  - Max: {prediction.max():.4f}")
     print(f"  - Mean: {prediction.mean():.4f}")
@@ -160,16 +186,20 @@ def predict_fire_probability(model_path, input_tif_path, output_dir,
     # Create binary fire/no-fire map
     binary_prediction = (prediction > threshold).astype(np.uint8)
     
-    # Calculate fire statistics
+    # Calculate fire statistics for Uttarakhand region only
+    uttarakhand_pixels = np.sum(uttarakhand_mask)
     total_pixels = h * w
     fire_pixels = np.sum(binary_prediction)
-    fire_percentage = (fire_pixels / total_pixels) * 100
+    fire_percentage_uttarakhand = (fire_pixels / uttarakhand_pixels) * 100 if uttarakhand_pixels > 0 else 0
+    fire_percentage_total = (fire_pixels / total_pixels) * 100
     
-    print(f"🔥 Fire Detection Results:")
+    print(f"🔥 Fire Detection Results (Uttarakhand Region):")
     print(f"  - Threshold used: {threshold}")
     print(f"  - Fire pixels: {fire_pixels:,}")
+    print(f"  - Uttarakhand pixels: {uttarakhand_pixels:,}")
     print(f"  - Total pixels: {total_pixels:,}")
-    print(f"  - Fire coverage: {fire_percentage:.2f}%")
+    print(f"  - Fire coverage (Uttarakhand): {fire_percentage_uttarakhand:.2f}%")
+    print(f"  - Fire coverage (Total image): {fire_percentage_total:.2f}%")
     
     # Create output directory if it doesn't exist
     os.makedirs(output_dir, exist_ok=True)
@@ -225,8 +255,10 @@ def predict_fire_probability(model_path, input_tif_path, output_dir,
     metadata = {
         'threshold': threshold,
         'fire_pixels': int(fire_pixels),
+        'uttarakhand_pixels': int(uttarakhand_pixels),
         'total_pixels': int(total_pixels),
-        'fire_percentage': fire_percentage,
+        'fire_percentage_uttarakhand': fire_percentage_uttarakhand,
+        'fire_percentage_total': fire_percentage_total,
         'prediction_stats': {
             'min': float(prediction.min()),
             'max': float(prediction.max()),
@@ -238,12 +270,14 @@ def predict_fire_probability(model_path, input_tif_path, output_dir,
     metadata_path = os.path.join(output_dir, 'prediction_metadata.txt')
     try:
         with open(metadata_path, 'w') as f:
-            f.write("Fire Prediction Results\n")
+            f.write("Fire Prediction Results (Uttarakhand Region)\n")
             f.write("=" * 50 + "\n")
             f.write(f"Threshold: {threshold}\n")
             f.write(f"Fire pixels: {fire_pixels:,}\n")
+            f.write(f"Uttarakhand pixels: {uttarakhand_pixels:,}\n")
             f.write(f"Total pixels: {total_pixels:,}\n")
-            f.write(f"Fire coverage: {fire_percentage:.2f}%\n")
+            f.write(f"Fire coverage (Uttarakhand): {fire_percentage_uttarakhand:.2f}%\n")
+            f.write(f"Fire coverage (Total): {fire_percentage_total:.2f}%\n")
             f.write(f"Probability min: {prediction.min():.4f}\n")
             f.write(f"Probability max: {prediction.max():.4f}\n")
             f.write(f"Probability mean: {prediction.mean():.4f}\n")
@@ -258,7 +292,14 @@ def predict_fire_probability(model_path, input_tif_path, output_dir,
     return {
         'probability_map': prediction,
         'binary_map': binary_prediction,
-        'metadata': metadata
+        'metadata': {
+            'input_file': input_tif_path,
+            'fire_percentage_uttarakhand': fire_percentage_uttarakhand,
+            'fire_percentage_total': fire_percentage_total,
+            'output_dir': output_dir,
+            'model_file': model_path,
+            'timestamp': metadata['timestamp']
+        }
     }
 
 def predict_with_confidence_zones(input_tif_path, output_dir, results=None):
@@ -440,7 +481,8 @@ if __name__ == "__main__":
         )
         
         print("\n📊 FINAL RESULTS:")
-        print(f"Fire coverage: {results['metadata']['fire_percentage']:.2f}%")
+        print(f"Fire coverage (Uttarakhand): {results['metadata']['fire_percentage_uttarakhand']:.2f}%")
+        print(f"Fire coverage (Total): {results['metadata']['fire_percentage_total']:.2f}%")
         
     else:
         print("⚠️ Input file not found. Please update the input_tif_path.")
