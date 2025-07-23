@@ -137,7 +137,7 @@ def predict_fire_probability(model_path, input_tif_path, output_dir,
             
             # Predict
             try:
-                pred_patch = model.predict(patch, verbose=0)[0, :, :, 0]
+                pred_patch = model.predict(patch, verbose=1)[0, :, :, 0]
             except Exception as e:
                 print(f"❌ Prediction failed for patch at ({y}, {x}): {str(e)}")
                 continue

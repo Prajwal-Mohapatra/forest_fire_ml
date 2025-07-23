@@ -39,7 +39,7 @@ def run_evaluation(model_path, test_data_dir):
     print("📊 Starting Model Evaluation...")
     
     # Get test files
-    test_files = sorted(glob.glob(os.path.join(test_data_dir, 'stack_2016_05_2*.tif')))
+    test_files = sorted(glob.glob(os.path.join(test_data_dir, 'stack_2016_05_*.tif')))
     
     from evaluate import evaluate_model
     results = evaluate_model(model_path, test_files)
