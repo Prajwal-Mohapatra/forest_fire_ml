@@ -73,7 +73,7 @@ def create_datasets(base_dir):
     #val_files = [f for f in all_files if '2016_04_' in f and int(f.split('_')[-1].split('.')[0]) > 20]
     #test_files = [f for f in all_files if '2016_05_' in f]
 
-    ## Updated Temporal spli for trial purpose
+    ## Updated Temporal split for trial purpose
     # Training: April (1-27) + May (1-3)
     train_files = [f for f in all_files if
                    ('2016_04_' in f and int(f.split('_')[-1].split('.')[0]) <= 27) or
@@ -102,11 +102,12 @@ def main():
     # Configuration
     CONFIG = {
         'patch_size': 256,
-        'batch_size': 8,
-        'n_patches_per_img': 30,
-        'epochs': 50,
+        'batch_size': 16,
+        'n_patches_per_img': 60,
+        'epochs': 20,
         'learning_rate': 1e-4,
-        'fire_focus_ratio': 0.8,
+        #'fire_focus_ratio': 0.8, changing to 1 to consider only fire points
+        'fire_focus_ratio': 1,
     }
     
     print("🔥 Starting Fire Prediction Model Training...")
@@ -249,3 +250,4 @@ def plot_training_history(history, output_dir):
 
 if __name__ == "__main__":
     main()
+
